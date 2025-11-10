@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'screens/create_deck_screen.dart';
 import 'models/user_data.dart';
 import 'models/deck.dart';
 import 'models/flashcard.dart';
@@ -16,6 +17,8 @@ class SigmaCardsApp extends StatefulWidget {
 }
 
 class _SigmaCardsAppState extends State<SigmaCardsApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   UserData _userData = UserData(
     hasCompletedOnboarding: true,
     decks: [
@@ -71,8 +74,23 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
   }
 
   void _createDeck() {
-    // Placeholder for create deck functionality
-    print('Create deck');
+    _navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (context) => CreateDeckScreen(
+          onSave: (deck) {
+            setState(() {
+              _userData = _userData.copyWith(
+                decks: [..._userData.decks, deck],
+              );
+            });
+            _navigatorKey.currentState?.pop();
+          },
+          onCancel: () {
+            _navigatorKey.currentState?.pop();
+          },
+        ),
+      ),
+    );
   }
 
   void _studyDeck(Deck deck) {
@@ -101,6 +119,7 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'SigmaCards',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
