@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/deck.dart';
+import '../models/flashcard.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
 import '../widgets/create_deck/deck_info_form.dart';
 import '../widgets/create_deck/color_picker.dart';
+import '../widgets/create_deck/flashcards_editor.dart';
 
 class CreateDeckScreen extends StatefulWidget {
   final Function(Deck) onSave;
@@ -23,12 +25,74 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedColorToken = 'bg-purple-500';
+  final List<FlashcardDraft> _cards = [FlashcardDraft()];
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  void _handleAddCard() {
+    setState(() {
+      _cards.add(FlashcardDraft());
+    });
+  }
+
+  void _handleRemoveCard(int index) {
+    setState(() {
+      if (_cards.length > 1) _cards.removeAt(index);
+    });
+  }
+
+  void _handleCardChange(int index, String field, String value) {
+    setState(() {
+      if (field == 'front') {
+        _cards[index].front = value;
+      } else {
+        _cards[index].back = value;
+      }
+    });
+  }
+
+  void _save() {
+    final name = _nameController.text.trim();
+    final description = _descriptionController.text.trim();
+    if (name.isEmpty) {
+      _showSnack('Please enter a deck name');
+      return;
+    }
+    final validCards = _cards.where((c) => c.isValid).toList();
+    if (validCards.isEmpty) {
+      _showSnack('Please add at least one complete card');
+      return;
+    }
+
+    final deck = Deck(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      description: description,
+      color: _selectedColorToken,
+      createdAt: DateTime.now(),
+      cards: validCards.map((c) => Flashcard(
+        id: UniqueKey().toString(),
+        front: c.front.trim(),
+        back: c.back.trim(),
+        nextReview: DateTime.now(),
+        interval: 1,
+        easeFactor: 2.5,
+        repetitions: 0,
+      )).toList(),
+    );
+
+    widget.onSave(deck);
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -72,10 +136,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      // TODO: Implement save with validation
-                      widget.onCancel();
-                    },
+                    onPressed: _save,
                     child: Text(
                       'Save',
                       style: TextStyle(
@@ -108,6 +169,14 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
                         });
                       },
                       isDark: isDark,
+                    ),
+                    const SizedBox(height: 16),
+                    FlashcardsEditor(
+                      cards: _cards,
+                      isDark: isDark,
+                      onAddCard: _handleAddCard,
+                      onRemoveCard: _handleRemoveCard,
+                      onChange: _handleCardChange,
                     ),
                   ],
                 ),
