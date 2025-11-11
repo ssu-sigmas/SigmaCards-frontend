@@ -83,6 +83,12 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
                 decks: [..._userData.decks, deck],
               );
             });
+            final ctx = _navigatorKey.currentContext;
+            if (ctx != null) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                const SnackBar(content: Text('Deck created successfully')),
+              );
+            }
             _navigatorKey.currentState?.pop();
           },
           onCancel: () {

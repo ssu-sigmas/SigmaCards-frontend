@@ -34,6 +34,45 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
     super.dispose();
   }
 
+  bool get _hasChanges {
+    if (_nameController.text.trim().isNotEmpty) return true;
+    if (_descriptionController.text.trim().isNotEmpty) return true;
+    for (final c in _cards) {
+      if (c.front.trim().isNotEmpty || c.back.trim().isNotEmpty) return true;
+    }
+    return false;
+  }
+
+  Future<void> _confirmCancel() async {
+    if (!_hasChanges) {
+      widget.onCancel();
+      return;
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+        title: const Text('Discard changes?'),
+        content: const Text('You have unsaved changes. Do you really want to go back?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    if (result == true) {
+      widget.onCancel();
+    }
+  }
+
   void _handleAddCard() {
     setState(() {
       _cards.add(FlashcardDraft());
@@ -122,7 +161,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
-                    onPressed: widget.onCancel,
+                    onPressed: _confirmCancel,
                     color: isDark ? Colors.white : Colors.black87,
                   ),
                   Expanded(
