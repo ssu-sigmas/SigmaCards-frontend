@@ -4,6 +4,7 @@ import 'screens/create_deck_screen.dart';
 import 'models/user_data.dart';
 import 'models/deck.dart';
 import 'models/flashcard.dart';
+import 'services/storage_service.dart';
 
 void main() {
   runApp(const SigmaCardsApp());
@@ -18,6 +19,8 @@ class SigmaCardsApp extends StatefulWidget {
 
 class _SigmaCardsAppState extends State<SigmaCardsApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  bool _isLoading = true;
 
   UserData _userData = UserData(
     hasCompletedOnboarding: true,
@@ -63,6 +66,25 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     theme: AppTheme.light,
   );
 
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final loaded = await StorageService.loadUserData();
+    if (!mounted) return;
+    setState(() {
+      if (loaded != null) {
+        _userData = loaded;
+      }
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _persist() => StorageService.saveUserData(_userData);
+
   void _toggleTheme() {
     setState(() {
       _userData = _userData.copyWith(
@@ -71,6 +93,7 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
             : AppTheme.light,
       );
     });
+    _persist();
   }
 
   void _createDeck() {
@@ -83,6 +106,7 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
                 decks: [..._userData.decks, deck],
               );
             });
+            _persist();
             final ctx = _navigatorKey.currentContext;
             if (ctx != null) {
               ScaffoldMessenger.of(ctx).showSnackBar(
@@ -115,6 +139,7 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
         decks: _userData.decks.where((d) => d.id != deckId).toList(),
       );
     });
+    _persist();
   }
 
   void _aiImport() {
@@ -144,15 +169,19 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
       themeMode: _userData.theme == AppTheme.light 
           ? ThemeMode.light 
           : ThemeMode.dark,
-      home: HomeScreen(
-        userData: _userData,
-        onCreateDeck: _createDeck,
-        onStudyDeck: _studyDeck,
-        onQuickStudy: _quickStudy,
-        onDeleteDeck: _deleteDeck,
-        onAIImport: _aiImport,
-        onToggleTheme: _toggleTheme,
-      ),
+      home: _isLoading
+          ? const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            )
+          : HomeScreen(
+              userData: _userData,
+              onCreateDeck: _createDeck,
+              onStudyDeck: _studyDeck,
+              onQuickStudy: _quickStudy,
+              onDeleteDeck: _deleteDeck,
+              onAIImport: _aiImport,
+              onToggleTheme: _toggleTheme,
+            ),
     );
   }
 }
