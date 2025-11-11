@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/create_deck_screen.dart';
+import 'screens/study_session_screen.dart';
 import 'models/user_data.dart';
 import 'models/deck.dart';
 import 'models/flashcard.dart';
@@ -124,8 +125,21 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
   }
 
   void _studyDeck(Deck deck) {
-    // Placeholder for study deck functionality
-    print('Study deck: ${deck.name}');
+    _navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (context) => StudySessionScreen(
+          deck: deck,
+          onComplete: (updatedDeck) {
+            setState(() {
+              _userData = _userData.copyWith(
+                decks: _userData.decks.map((d) => d.id == updatedDeck.id ? updatedDeck : d).toList(),
+              );
+            });
+            _persist();
+          },
+        ),
+      ),
+    );
   }
 
   void _quickStudy() {
