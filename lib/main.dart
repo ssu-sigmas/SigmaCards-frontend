@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/create_deck_screen.dart';
 import 'screens/study_session_screen.dart';
+import 'screens/quick_study_session_screen.dart';
 import 'models/user_data.dart';
 import 'models/deck.dart';
 import 'models/flashcard.dart';
@@ -143,8 +144,22 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
   }
 
   void _quickStudy() {
-    // Placeholder for quick study functionality
-    print('Quick study');
+    _navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (context) => QuickStudySessionScreen(
+          decks: _userData.decks,
+          onComplete: (updatedDecks) {
+            setState(() {
+              _userData = _userData.copyWith(decks: updatedDecks);
+            });
+            _persist();
+          },
+          onBack: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+    );
   }
 
   void _deleteDeck(String deckId) {
