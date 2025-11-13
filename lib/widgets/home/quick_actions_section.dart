@@ -64,10 +64,10 @@ class QuickActionsSection extends StatelessWidget {
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.camera_alt, size: 24, color: Colors.white),
+            Icon(Icons.description, size: 24, color: Colors.white),
             SizedBox(width: 8),
             Text(
-              'AI Import',
+              'Import Text',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,

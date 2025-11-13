@@ -10,11 +10,13 @@ import '../widgets/create_deck/flashcards_editor.dart';
 class CreateDeckScreen extends StatefulWidget {
   final Function(Deck) onSave;
   final VoidCallback onCancel;
+  final List<FlashcardDraft>? initialCards;
 
   const CreateDeckScreen({
     super.key,
     required this.onSave,
     required this.onCancel,
+    this.initialCards,
   });
 
   @override
@@ -25,7 +27,20 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedColorToken = 'bg-purple-500';
-  final List<FlashcardDraft> _cards = [FlashcardDraft()];
+  late final List<FlashcardDraft> _cards;
+
+  @override
+  void initState() {
+    super.initState();
+    _cards = widget.initialCards != null && widget.initialCards!.isNotEmpty
+        ? widget.initialCards!
+            .map((card) => FlashcardDraft(
+                  front: card.front,
+                  back: card.back,
+                ))
+            .toList()
+        : [FlashcardDraft()];
+  }
 
   @override
   void dispose() {

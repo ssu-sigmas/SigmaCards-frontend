@@ -3,10 +3,12 @@ import 'screens/home_screen.dart';
 import 'screens/create_deck_screen.dart';
 import 'screens/study_session_screen.dart';
 import 'screens/quick_study_session_screen.dart';
+import 'screens/import_text_screen.dart';
 import 'models/user_data.dart';
 import 'models/deck.dart';
 import 'models/flashcard.dart';
 import 'services/storage_service.dart';
+import 'widgets/create_deck/flashcards_editor.dart';
 
 void main() {
   runApp(const SigmaCardsApp());
@@ -98,10 +100,11 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     _persist();
   }
 
-  void _createDeck() {
+  void _createDeck({List<FlashcardDraft>? initialCards}) {
     _navigatorKey.currentState?.push(
       MaterialPageRoute(
         builder: (context) => CreateDeckScreen(
+          initialCards: initialCards,
           onSave: (deck) {
             setState(() {
               _userData = _userData.copyWith(
@@ -171,9 +174,21 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     _persist();
   }
 
-  void _aiImport() {
-    // Placeholder for AI import functionality
-    print('AI Import');
+  Future<void> _aiImport() async {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+
+    final importedDrafts = await navigator.push<List<FlashcardDraft>>(
+      MaterialPageRoute(
+        builder: (context) => const ImportTextScreen(),
+      ),
+    );
+
+    if (importedDrafts == null || importedDrafts.isEmpty) {
+      return;
+    }
+
+    _createDeck(initialCards: importedDrafts);
   }
 
   @override
@@ -204,7 +219,7 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
             )
           : HomeScreen(
               userData: _userData,
-              onCreateDeck: _createDeck,
+              onCreateDeck: () => _createDeck(),
               onStudyDeck: _studyDeck,
               onQuickStudy: _quickStudy,
               onDeleteDeck: _deleteDeck,
