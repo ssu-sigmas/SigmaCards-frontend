@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/create_deck_screen.dart';
 import 'screens/study_session_screen.dart';
 import 'screens/quick_study_session_screen.dart';
 import 'screens/import_text_screen.dart';
 import 'models/user_data.dart';
 import 'models/deck.dart';
-import 'models/flashcard.dart';
 import 'services/storage_service.dart';
 import 'widgets/create_deck/flashcards_editor.dart';
 
@@ -27,46 +27,9 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
   bool _isLoading = true;
 
   UserData _userData = UserData(
-    hasCompletedOnboarding: true,
-    decks: [
-      Deck(
-        id: 'demo-1',
-        name: 'Spanish Basics',
-        description: 'Essential Spanish vocabulary',
-        color: 'bg-blue-500',
-        createdAt: DateTime.now(),
-        cards: [
-          Flashcard(
-            id: 'card-1',
-            front: 'Hello',
-            back: 'Hola',
-            nextReview: DateTime.now(),
-            interval: 1,
-            easeFactor: 2.5,
-            repetitions: 0,
-          ),
-          Flashcard(
-            id: 'card-2',
-            front: 'Goodbye',
-            back: 'Adiós',
-            nextReview: DateTime.now(),
-            interval: 1,
-            easeFactor: 2.5,
-            repetitions: 0,
-          ),
-          Flashcard(
-            id: 'card-3',
-            front: 'Thank you',
-            back: 'Gracias',
-            nextReview: DateTime.now(),
-            interval: 1,
-            easeFactor: 2.5,
-            repetitions: 0,
-          ),
-        ],
-      ),
-    ],
-    studyStreak: 5,
+    hasCompletedOnboarding: false,
+    decks: [],
+    studyStreak: 0,
     theme: AppTheme.light,
   );
 
@@ -191,6 +154,15 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     _createDeck(initialCards: importedDrafts);
   }
 
+  void _completeOnboarding() {
+    setState(() {
+      _userData = _userData.copyWith(
+        hasCompletedOnboarding: true,
+      );
+    });
+    _persist();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -217,15 +189,19 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
           ? const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             )
-          : HomeScreen(
-              userData: _userData,
-              onCreateDeck: () => _createDeck(),
-              onStudyDeck: _studyDeck,
-              onQuickStudy: _quickStudy,
-              onDeleteDeck: _deleteDeck,
-              onAIImport: _aiImport,
-              onToggleTheme: _toggleTheme,
-            ),
+          : _userData.hasCompletedOnboarding
+              ? HomeScreen(
+                  userData: _userData,
+                  onCreateDeck: () => _createDeck(),
+                  onStudyDeck: _studyDeck,
+                  onQuickStudy: _quickStudy,
+                  onDeleteDeck: _deleteDeck,
+                  onAIImport: _aiImport,
+                  onToggleTheme: _toggleTheme,
+                )
+              : OnboardingScreen(
+                  onComplete: _completeOnboarding,
+                ),
     );
   }
 }
