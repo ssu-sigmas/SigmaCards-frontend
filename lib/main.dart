@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/auth_screen.dart';
 import 'screens/create_deck_screen.dart';
 import 'screens/study_session_screen.dart';
 import 'screens/quick_study_session_screen.dart';
@@ -27,6 +28,7 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
   bool _isLoading = true;
 
   UserData _userData = UserData(
+    isAuthenticated: false,
     hasCompletedOnboarding: false,
     decks: [],
     studyStreak: 0,
@@ -163,6 +165,48 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     _persist();
   }
 
+  void _handleLogin(String email, String password) {
+    // TODO: Реализовать реальную логику авторизации
+    // Пока просто помечаем пользователя как авторизованного
+    setState(() {
+      _userData = _userData.copyWith(
+        isAuthenticated: true,
+      );
+    });
+    _persist();
+    
+    final ctx = _navigatorKey.currentContext;
+    if (ctx != null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(
+          content: Text('Вход выполнен успешно'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  void _handleRegister(String email, String password) {
+    // TODO: Реализовать реальную логику регистрации
+    // Пока просто помечаем пользователя как авторизованного
+    setState(() {
+      _userData = _userData.copyWith(
+        isAuthenticated: true,
+      );
+    });
+    _persist();
+    
+    final ctx = _navigatorKey.currentContext;
+    if (ctx != null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(
+          content: Text('Регистрация выполнена успешно'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -189,19 +233,24 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
           ? const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             )
-          : _userData.hasCompletedOnboarding
-              ? HomeScreen(
-                  userData: _userData,
-                  onCreateDeck: () => _createDeck(),
-                  onStudyDeck: _studyDeck,
-                  onQuickStudy: _quickStudy,
-                  onDeleteDeck: _deleteDeck,
-                  onAIImport: _aiImport,
-                  onToggleTheme: _toggleTheme,
+          : !_userData.isAuthenticated
+              ? AuthScreen(
+                  onLogin: _handleLogin,
+                  onRegister: _handleRegister,
                 )
-              : OnboardingScreen(
-                  onComplete: _completeOnboarding,
-                ),
+              : _userData.hasCompletedOnboarding
+                  ? HomeScreen(
+                      userData: _userData,
+                      onCreateDeck: () => _createDeck(),
+                      onStudyDeck: _studyDeck,
+                      onQuickStudy: _quickStudy,
+                      onDeleteDeck: _deleteDeck,
+                      onAIImport: _aiImport,
+                      onToggleTheme: _toggleTheme,
+                    )
+                  : OnboardingScreen(
+                      onComplete: _completeOnboarding,
+                    ),
     );
   }
 }
