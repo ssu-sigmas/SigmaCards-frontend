@@ -65,11 +65,18 @@ class DecksSection extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: onCreateDeck,
-              icon: const Icon(Icons.add),
-              label: const Text('Create Deck'),
-              style: AppStyles.purpleButtonStyle,
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onCreateDeck,
+                icon: const Icon(Icons.add),
+                label: const Text('Create Deck'),
+                style: AppStyles.purpleButtonStyle.copyWith(
+                  padding: MaterialStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
+                ),
+              ),
             ),
           ],
         ),

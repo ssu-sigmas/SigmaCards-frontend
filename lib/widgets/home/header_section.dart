@@ -95,7 +95,7 @@ class HeaderSection extends StatelessWidget {
             icon: Icons.psychology,
             iconColor: AppColors.decksIconColor,
             value: '${userData.decks.length}',
-            label: 'Decks',
+            label: 'Your Decks',
           ),
         ),
       ],

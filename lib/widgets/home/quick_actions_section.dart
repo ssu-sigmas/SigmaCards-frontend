@@ -21,6 +21,7 @@ class QuickActionsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: AppStyles.sectionSpacing),
           Text(
             'Quick Actions',
             style: AppStyles.sectionTitle(isDark),
@@ -33,7 +34,11 @@ class QuickActionsSection extends StatelessWidget {
                   onPressed: onCreateDeck,
                   icon: const Icon(Icons.add, size: 24),
                   label: const Text('Create Deck'),
-                  style: AppStyles.purpleButtonStyle,
+                  style: AppStyles.purpleButtonStyle.copyWith(
+                    padding: MaterialStateProperty.all(
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: AppStyles.sectionSpacing),
