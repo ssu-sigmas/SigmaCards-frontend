@@ -9,6 +9,7 @@ import 'screens/import_text_screen.dart';
 import 'models/user_data.dart';
 import 'models/deck.dart';
 import 'services/storage_service.dart';
+import 'services/api_service.dart';
 import 'widgets/create_deck/flashcards_editor.dart';
 
 void main() {
@@ -186,24 +187,74 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     }
   }
 
-  void _handleRegister(String email, String password) {
-    // TODO: Реализовать реальную логику регистрации
-    // Пока просто помечаем пользователя как авторизованного
-    setState(() {
-      _userData = _userData.copyWith(
-        isAuthenticated: true,
-      );
-    });
-    _persist();
-    
+  Future<void> _handleRegister(String username, String email, String password) async {
     final ctx = _navigatorKey.currentContext;
+    
+    // Показываем индикатор загрузки
     if (ctx != null) {
       ScaffoldMessenger.of(ctx).showSnackBar(
         const SnackBar(
-          content: Text('Регистрация выполнена успешно'),
-          backgroundColor: Colors.green,
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Регистрация...'),
+            ],
+          ),
+          duration: Duration(seconds: 30),
         ),
       );
+    }
+
+    // Вызываем API регистрации
+    final result = await ApiService.register(
+      username: username,
+      email: email,
+      password: password,
+    );
+
+    if (!mounted) return;
+
+    // Убираем предыдущий snackbar
+    if (ctx != null) {
+      ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
+    }
+
+    if (result['success'] == true) {
+      // Успешная регистрация
+      setState(() {
+        _userData = _userData.copyWith(
+          isAuthenticated: true,
+        );
+      });
+      _persist();
+
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+            content: Text('Регистрация выполнена успешно'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      // Ошибка регистрации
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+            content: Text(result['error'] ?? 'Ошибка регистрации'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 

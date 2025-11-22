@@ -6,7 +6,7 @@ import 'registration_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   final Function(String email, String password) onLogin;
-  final Function(String email, String password) onRegister;
+  final Function(String username, String email, String password) onRegister;
   final VoidCallback? onBack;
   final bool initialIsLogin; // true для логина, false для регистрации
 

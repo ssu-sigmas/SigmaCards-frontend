@@ -3,7 +3,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
 
 class RegistrationScreen extends StatefulWidget {
-  final Function(String email, String password) onRegister;
+  final Function(String username, String email, String password) onRegister;
   final VoidCallback? onBack;
   final VoidCallback? onLogin;
 
@@ -20,6 +20,7 @@ class RegistrationScreen extends StatefulWidget {
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -30,10 +31,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  String? _validateUsername(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Имя пользователя обязательно';
+    }
+    if (value.length < 3) {
+      return 'Имя пользователя должно содержать минимум 3 символа';
+    }
+    return null;
   }
 
   String? _validateEmail(String? value) {
@@ -76,12 +88,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _isLoading = true;
     });
 
-    // Имитация задержки регистрации
-    await Future.delayed(const Duration(milliseconds: 500));
-
     if (!mounted) return;
 
     widget.onRegister(
+      _usernameController.text.trim(),
       _emailController.text.trim(),
       _passwordController.text,
     );
@@ -178,6 +188,61 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
 
                 const SizedBox(height: 40),
+
+                // Username field
+                TextFormField(
+                  controller: _usernameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Имя пользователя',
+                    hintText: 'Введите имя пользователя',
+                    prefixIcon: const Icon(Icons.person_outlined),
+                    filled: true,
+                    fillColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppStyles.borderRadius),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white24 : Colors.black12,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppStyles.borderRadius),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.white24 : Colors.black12,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppStyles.borderRadius),
+                      borderSide: BorderSide(
+                        color: Colors.purple.shade600,
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppStyles.borderRadius),
+                      borderSide: const BorderSide(
+                        color: Colors.red,
+                        width: 2,
+                      ),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppStyles.borderRadius),
+                      borderSide: const BorderSide(
+                        color: Colors.red,
+                        width: 2,
+                      ),
+                    ),
+                    labelStyle: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.white38 : Colors.black26,
+                    ),
+                  ),
+                  validator: _validateUsername,
+                ),
+
+                const SizedBox(height: 20),
 
                 // Email field
                 TextFormField(
