@@ -3,7 +3,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
 
 class LoginScreen extends StatefulWidget {
-  final Function(String email, String password) onLogin;
+  final Future<void> Function(String email, String password) onLogin;
   final VoidCallback? onBack;
   final VoidCallback? onRegister;
 
@@ -60,15 +60,14 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // Имитация задержки входа
-    await Future.delayed(const Duration(milliseconds: 500));
-
     if (!mounted) return;
 
-    widget.onLogin(
+    await widget.onLogin(
       _emailController.text.trim(),
       _passwordController.text,
     );
+
+    if (!mounted) return;
 
     setState(() {
       _isLoading = false;

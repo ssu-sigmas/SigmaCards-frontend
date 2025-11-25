@@ -83,6 +83,59 @@ class ApiService {
     }
   }
 
+  // Вход пользователя
+  static Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode == 200) {
+        // Сохраняем токены
+        await saveTokens(
+          responseData['access_token'] as String,
+          responseData['refresh_token'] as String,
+        );
+        return {
+          'success': true,
+          'access_token': responseData['access_token'],
+          'refresh_token': responseData['refresh_token'],
+        };
+      } else {
+        // Обработка ошибок
+        final errorMessage = responseData['detail'] as String? ?? 
+            'Ошибка входа';
+        return {
+          'success': false,
+          'error': errorMessage,
+        };
+      }
+    } on http.ClientException {
+      // Ошибка сети
+      return {
+        'success': false,
+        'error': 'Ошибка подключения к серверу. Проверьте, что бэкенд запущен.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Неизвестная ошибка: ${e.toString()}',
+      };
+    }
+  }
+
   // Получить заголовки с авторизацией
   static Future<Map<String, String>> getAuthHeaders() async {
     final headers = <String, String>{

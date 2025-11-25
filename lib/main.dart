@@ -166,24 +166,73 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     _persist();
   }
 
-  void _handleLogin(String email, String password) {
-    // TODO: Реализовать реальную логику авторизации
-    // Пока просто помечаем пользователя как авторизованного
-    setState(() {
-      _userData = _userData.copyWith(
-        isAuthenticated: true,
-      );
-    });
-    _persist();
-    
+  Future<void> _handleLogin(String email, String password) async {
     final ctx = _navigatorKey.currentContext;
+    
+    // Показываем индикатор загрузки
     if (ctx != null) {
       ScaffoldMessenger.of(ctx).showSnackBar(
         const SnackBar(
-          content: Text('Вход выполнен успешно'),
-          backgroundColor: Colors.green,
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Вход...'),
+            ],
+          ),
+          duration: Duration(seconds: 30),
         ),
       );
+    }
+
+    // Вызываем API входа
+    final result = await ApiService.login(
+      email: email,
+      password: password,
+    );
+
+    if (!mounted) return;
+
+    // Убираем предыдущий snackbar
+    if (ctx != null) {
+      ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
+    }
+
+    if (result['success'] == true) {
+      // Успешный вход
+      setState(() {
+        _userData = _userData.copyWith(
+          isAuthenticated: true,
+        );
+      });
+      _persist();
+
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+            content: Text('Вход выполнен успешно'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      // Ошибка входа
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+            content: Text(result['error'] ?? 'Ошибка входа'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 

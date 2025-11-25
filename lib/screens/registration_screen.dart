@@ -3,7 +3,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
 
 class RegistrationScreen extends StatefulWidget {
-  final Function(String username, String email, String password) onRegister;
+  final Future<void> Function(String username, String email, String password) onRegister;
   final VoidCallback? onBack;
   final VoidCallback? onLogin;
 
@@ -90,11 +90,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     if (!mounted) return;
 
-    widget.onRegister(
+    await widget.onRegister(
       _usernameController.text.trim(),
       _emailController.text.trim(),
       _passwordController.text,
     );
+
+    if (!mounted) return;
 
     setState(() {
       _isLoading = false;
