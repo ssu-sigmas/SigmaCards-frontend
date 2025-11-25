@@ -39,35 +39,18 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
   }
 
   List<CardWithDeck> _prepareStudyCards() {
-    final today = DateTime.now();
     final allDueCards = <CardWithDeck>[];
 
-    // Собираем все due карточки из всех колод
+    // TODO: Загрузить due cards через API /review/due
+    // Пока используем все карточки из всех колод
     for (final deck in widget.decks) {
-      final dueCards = deck.cards.where((card) =>
-        card.nextReview.isBefore(today) || 
-        card.nextReview.isAtSameMomentAs(today)
-      ).toList();
-      
-      for (final card in dueCards) {
+      final cards = deck.cards ?? [];
+      for (final card in cards) {
         allDueCards.add(CardWithDeck(
           card: card,
           deckId: deck.id,
-          deckName: deck.name,
+          deckName: deck.title,
         ));
-      }
-    }
-
-    // Если нет due карточек, берем все карточки
-    if (allDueCards.isEmpty) {
-      for (final deck in widget.decks) {
-        for (final card in deck.cards) {
-          allDueCards.add(CardWithDeck(
-            card: card,
-            deckId: deck.id,
-            deckName: deck.name,
-          ));
-        }
       }
     }
 
@@ -88,20 +71,18 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
     
     final updatedCard = _calculateNextReview(_current!.card, d);
 
+    // TODO: Отправить оценку через API /review/{user_card_id}
     // Обновляем колоду, которая содержит эту карточку
     _updatedDecks = _updatedDecks.map((deck) {
       if (deck.id == _current!.deckId) {
-        final updatedCards = deck.cards.map((c) =>
+        final currentCards = deck.cards ?? [];
+        final updatedCards = currentCards.map((c) =>
           c.id == updatedCard.id ? updatedCard : c
         ).toList();
         
-        return Deck(
-          id: deck.id,
-          name: deck.name,
-          description: deck.description,
+        return deck.copyWith(
           cards: updatedCards,
-          color: deck.color,
-          createdAt: deck.createdAt,
+          updatedAt: DateTime.now(),
         );
       }
       return deck;
@@ -147,47 +128,11 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
   }
 
   Flashcard _calculateNextReview(Flashcard card, _Difficulty d) {
-    int interval = card.interval;
-    double ease = card.easeFactor;
-    int reps = card.repetitions;
-
-    switch (d) {
-      case _Difficulty.again:
-        interval = 1;
-        reps = 0;
-        ease = (ease - 0.2).clamp(1.3, 10.0);
-        break;
-      case _Difficulty.hard:
-        interval = (interval * 1.2).round().clamp(1, 36500);
-        ease = (ease - 0.15).clamp(1.3, 10.0);
-        reps = reps + 1;
-        break;
-      case _Difficulty.good:
-        if (reps == 0) {
-          interval = 1;
-        } else if (reps == 1) {
-          interval = 6;
-        } else {
-          interval = (interval * ease).round();
-        }
-        reps = reps + 1;
-        break;
-      case _Difficulty.easy:
-        interval = reps == 0 ? 4 : (interval * ease * 1.3).round();
-        ease = ease + 0.15;
-        reps = reps + 1;
-        break;
-    }
-    
-    final next = DateTime.now().add(Duration(days: interval));
-    return Flashcard(
-      id: card.id,
-      front: card.front,
-      back: card.back,
-      nextReview: next,
-      interval: interval,
-      easeFactor: ease,
-      repetitions: reps,
+    // TODO: Заменить на вызов API /review/{user_card_id} с FSRS алгоритмом
+    // Пока возвращаем карточку без изменений, так как FSRS параметры в UserCard
+    // Временная заглушка для совместимости
+    return card.copyWith(
+      updatedAt: DateTime.now(),
     );
   }
 

@@ -27,9 +27,10 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   @override
   void initState() {
     super.initState();
-    final today = DateTime.now();
-    final due = widget.deck.cards.where((c) => !c.nextReview.isAfter(today)).toList();
-    _studyCards = due.isNotEmpty ? due : [...widget.deck.cards];
+    // TODO: Загрузить due cards через API /review/due
+    // Пока используем все карточки, если они есть
+    final cards = widget.deck.cards ?? [];
+    _studyCards = cards.isNotEmpty ? List.from(cards) : [];
   }
 
   Flashcard? get _current => _currentIndex < _studyCards.length ? _studyCards[_currentIndex] : null;
@@ -38,15 +39,15 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
 
   void _handleDifficulty(_Difficulty d) {
     if (_current == null) return;
+    
+    // TODO: Отправить оценку через API /review/{user_card_id}
+    // Пока просто обновляем локально для совместимости
     final updatedCard = _calculateNextReview(_current!, d);
-    final updatedCards = widget.deck.cards.map((c) => c.id == updatedCard.id ? updatedCard : c).toList();
-    final updatedDeck = Deck(
-      id: widget.deck.id,
-      name: widget.deck.name,
-      description: widget.deck.description,
+    final currentCards = widget.deck.cards ?? [];
+    final updatedCards = currentCards.map((c) => c.id == updatedCard.id ? updatedCard : c).toList();
+    final updatedDeck = widget.deck.copyWith(
       cards: updatedCards,
-      color: widget.deck.color,
-      createdAt: widget.deck.createdAt,
+      updatedAt: DateTime.now(),
     );
 
     if (_currentIndex < _studyCards.length - 1) {
@@ -65,46 +66,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   }
 
   Flashcard _calculateNextReview(Flashcard card, _Difficulty d) {
-    int interval = card.interval;
-    double ease = card.easeFactor;
-    int reps = card.repetitions;
-
-    switch (d) {
-      case _Difficulty.again:
-        interval = 1;
-        reps = 0;
-        ease = (ease - 0.2).clamp(1.3, 10.0);
-        break;
-      case _Difficulty.hard:
-        interval = (interval * 1.2).round().clamp(1, 36500);
-        ease = (ease - 0.15).clamp(1.3, 10.0);
-        reps = reps + 1;
-        break;
-      case _Difficulty.good:
-        if (reps == 0) {
-          interval = 1;
-        } else if (reps == 1) {
-          interval = 6;
-        } else {
-          interval = (interval * ease).round();
-        }
-        reps = reps + 1;
-        break;
-      case _Difficulty.easy:
-        interval = reps == 0 ? 4 : (interval * ease * 1.3).round();
-        ease = ease + 0.15;
-        reps = reps + 1;
-        break;
-    }
-    final next = DateTime.now().add(Duration(days: interval));
-    return Flashcard(
-      id: card.id,
-      front: card.front,
-      back: card.back,
-      nextReview: next,
-      interval: interval,
-      easeFactor: ease,
-      repetitions: reps,
+    // TODO: Заменить на вызов API /review/{user_card_id} с FSRS алгоритмом
+    // Пока возвращаем карточку без изменений, так как FSRS параметры в UserCard
+    // Временная заглушка для совместимости
+    return card.copyWith(
+      updatedAt: DateTime.now(),
     );
   }
 
@@ -124,7 +90,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
       appBar: AppBar(
-        title: Text(widget.deck.name),
+        title: Text(widget.deck.title),
       ),
       body: Padding(
         padding: const EdgeInsets.all(AppStyles.defaultPadding),

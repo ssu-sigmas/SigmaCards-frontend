@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../models/deck.dart';
 import '../models/flashcard.dart';
+import '../models/enums.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
 import '../widgets/create_deck/deck_info_form.dart';
@@ -123,21 +125,36 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
       return;
     }
 
+    final uuid = const Uuid();
+    final now = DateTime.now();
+    
+    // TODO: Получить userId из UserData или API
+    final userId = ''; // Будет заполнено при интеграции с API
+
     final deck = Deck(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
-      description: description,
-      color: _selectedColorToken,
-      createdAt: DateTime.now(),
-      cards: validCards.map((c) => Flashcard(
-        id: UniqueKey().toString(),
-        front: c.front.trim(),
-        back: c.back.trim(),
-        nextReview: DateTime.now(),
-        interval: 1,
-        easeFactor: 2.5,
-        repetitions: 0,
-      )).toList(),
+      id: uuid.v4(),
+      userId: userId,
+      title: name,
+      description: description.isEmpty ? null : description,
+      status: DeckStatus.private,
+      createdAt: now,
+      updatedAt: now,
+      flashcardsCount: validCards.length,
+      cards: validCards.map((c) {
+        return Flashcard(
+          id: uuid.v4(),
+          deckId: '', // Будет установлено после создания колоды
+          cardType: CardType.keyTerms,
+          content: {
+            'front': c.front.trim(),
+            'back': c.back.trim(),
+          },
+          position: 0,
+          isSuspended: false,
+          createdAt: now,
+          updatedAt: now,
+        );
+      }).toList(),
     );
 
     widget.onSave(deck);

@@ -15,20 +15,16 @@ class DeckCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  Color _getColorFromString(String colorString) {
-    if (colorString.contains('blue')) return Colors.blue;
-    if (colorString.contains('purple')) return Colors.purple;
-    if (colorString.contains('pink')) return Colors.pink;
-    if (colorString.contains('green')) return Colors.green;
-    if (colorString.contains('orange')) return Colors.orange;
-    if (colorString.contains('red')) return Colors.red;
-    return Colors.blue;
+  Color _getDeckColor() {
+    // Используем фиолетовый по умолчанию, так как color больше нет в модели
+    // Можно использовать статус или другой способ определения цвета
+    return Colors.purple;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final deckColor = _getColorFromString(deck.color);
+    final deckColor = _getDeckColor();
     
     return Card(
       color: isDark ? AppColors.darkCard : AppColors.lightCard,
@@ -59,7 +55,7 @@ class DeckCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    deck.name,
+                    deck.title,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -70,7 +66,7 @@ class DeckCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    deck.description,
+                    deck.description ?? '',
                     style: TextStyle(
                       fontSize: 14,
                       color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -82,7 +78,7 @@ class DeckCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '${deck.cards.length} cards',
+                        '${deck.cards?.length ?? deck.flashcardsCount} cards',
                         style: TextStyle(
                           fontSize: 12,
                           color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -108,7 +104,7 @@ class DeckCard extends StatelessWidget {
             Column(
               children: [
                 IconButton(
-                  onPressed: deck.cards.isEmpty ? null : onStudy,
+                  onPressed: (deck.cards?.isEmpty ?? deck.flashcardsCount == 0) ? null : onStudy,
                   icon: const Icon(Icons.play_arrow),
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.purple,

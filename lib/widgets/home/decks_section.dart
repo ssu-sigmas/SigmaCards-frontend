@@ -105,7 +105,7 @@ class DecksSection extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Text('Delete deck?'),
         content: Text(
-          'This will permanently delete "${deck.name}" and all its cards. This action cannot be undone.',
+          'This will permanently delete "${deck.title}" and all its cards. This action cannot be undone.',
         ),
         actions: [
           TextButton(
