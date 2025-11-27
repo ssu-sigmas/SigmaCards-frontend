@@ -45,12 +45,55 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
   Future<void> _loadUserData() async {
     final loaded = await StorageService.loadUserData();
     if (!mounted) return;
+    
     setState(() {
       if (loaded != null) {
         _userData = loaded;
       }
+    });
+
+    // Если пользователь авторизован, загружаем колоды с сервера
+    if (_userData.isAuthenticated && await ApiService.isAuthenticated()) {
+      await _loadDecksFromServer();
+    }
+
+    if (!mounted) return;
+    setState(() {
       _isLoading = false;
     });
+  }
+
+  Future<void> _loadDecksFromServer() async {
+    try {
+      final result = await ApiService.getUserDecks(limit: 100);
+      
+      if (!mounted) return;
+      
+      if (result['success'] == true) {
+        final decksData = result['decks'] as List;
+        final decks = decksData
+            .map((deckJson) => Deck.fromJson(deckJson as Map<String, dynamic>))
+            .toList();
+        
+        setState(() {
+          _userData = _userData.copyWith(decks: decks);
+        });
+        _persist();
+      }
+    } catch (e) {
+      // Ошибка загрузки колод - используем локальные данные
+      if (mounted) {
+        final ctx = _navigatorKey.currentContext;
+        if (ctx != null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            SnackBar(
+              content: Text('Не удалось загрузить колоды: ${e.toString()}'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _persist() => StorageService.saveUserData(_userData);
@@ -71,18 +114,24 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
       MaterialPageRoute(
         builder: (context) => CreateDeckScreen(
           initialCards: initialCards,
-          onSave: (deck) {
-            setState(() {
-              _userData = _userData.copyWith(
-                decks: [..._userData.decks, deck],
-              );
-            });
-            _persist();
-            final ctx = _navigatorKey.currentContext;
-            if (ctx != null) {
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(content: Text('Deck created successfully')),
-              );
+          onSave: (deck) async {
+            // Если пользователь авторизован, отправляем на сервер
+            if (_userData.isAuthenticated && await ApiService.isAuthenticated()) {
+              await _createDeckOnServer(deck);
+            } else {
+              // Локальное сохранение
+              setState(() {
+                _userData = _userData.copyWith(
+                  decks: [..._userData.decks, deck],
+                );
+              });
+              _persist();
+              final ctx = _navigatorKey.currentContext;
+              if (ctx != null) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Deck created successfully')),
+                );
+              }
             }
             _navigatorKey.currentState?.pop();
           },
@@ -92,6 +141,97 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
         ),
       ),
     );
+  }
+
+  Future<void> _createDeckOnServer(Deck deck) async {
+    final ctx = _navigatorKey.currentContext;
+    
+    // Показываем индикатор загрузки
+    if (ctx != null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Создание колоды...'),
+            ],
+          ),
+          duration: Duration(seconds: 30),
+        ),
+      );
+    }
+
+    try {
+      final result = await ApiService.createDeck(
+        title: deck.title,
+        description: deck.description,
+      );
+
+      if (!mounted) return;
+
+      // Убираем предыдущий snackbar
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
+      }
+
+      if (result['success'] == true) {
+        // Создаем Deck из ответа сервера
+        final deckData = result['data'] as Map<String, dynamic>;
+        final createdDeck = Deck.fromJson(deckData);
+        
+        // Если есть карточки, создаем их отдельно
+        if (deck.cards != null && deck.cards!.isNotEmpty) {
+          // TODO: Создать карточки через API
+          // Пока добавляем колоду без карточек
+        }
+
+        setState(() {
+          _userData = _userData.copyWith(
+            decks: [..._userData.decks, createdDeck],
+          );
+        });
+        _persist();
+
+        if (ctx != null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(
+              content: Text('Колода создана успешно'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Ошибка создания
+        if (ctx != null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            SnackBar(
+              content: Text(result['error'] ?? 'Ошибка создания колоды'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _studyDeck(Deck deck) {
@@ -131,13 +271,81 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     );
   }
 
-  void _deleteDeck(String deckId) {
-    setState(() {
-      _userData = _userData.copyWith(
-        decks: _userData.decks.where((d) => d.id != deckId).toList(),
-      );
-    });
-    _persist();
+  Future<void> _deleteDeck(String deckId) async {
+    // Если пользователь авторизован, удаляем через API
+    if (_userData.isAuthenticated && await ApiService.isAuthenticated()) {
+      final ctx = _navigatorKey.currentContext;
+      
+      // Показываем индикатор загрузки
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                SizedBox(width: 16),
+                Text('Удаление колоды...'),
+              ],
+            ),
+            duration: Duration(seconds: 30),
+          ),
+        );
+      }
+
+      final result = await ApiService.deleteDeck(deckId);
+
+      if (!mounted) return;
+
+      // Убираем предыдущий snackbar
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
+      }
+
+      if (result['success'] == true) {
+        // Удаляем из локального состояния
+        setState(() {
+          _userData = _userData.copyWith(
+            decks: _userData.decks.where((d) => d.id != deckId).toList(),
+          );
+        });
+        _persist();
+
+        if (ctx != null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(
+              content: Text('Колода удалена'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Ошибка удаления
+        if (ctx != null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            SnackBar(
+              content: Text(result['error'] ?? 'Ошибка удаления колоды'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    } else {
+      // Локальное удаление
+      setState(() {
+        _userData = _userData.copyWith(
+          decks: _userData.decks.where((d) => d.id != deckId).toList(),
+        );
+      });
+      _persist();
+    }
   }
 
   Future<void> _aiImport() async {
@@ -206,13 +414,22 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     }
 
     if (result['success'] == true) {
+      // Получаем userId из сохраненных данных
+      final userId = await ApiService.getUserId();
+      
       // Успешный вход
       setState(() {
         _userData = _userData.copyWith(
           isAuthenticated: true,
+          userId: userId,
         );
       });
       _persist();
+
+      // Загружаем колоды с сервера
+      await _loadDecksFromServer();
+
+      if (!mounted) return;
 
       if (ctx != null) {
         ScaffoldMessenger.of(ctx).showSnackBar(
@@ -277,13 +494,22 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     }
 
     if (result['success'] == true) {
+      // Получаем userId из сохраненных данных
+      final userId = await ApiService.getUserId();
+      
       // Успешная регистрация
       setState(() {
         _userData = _userData.copyWith(
           isAuthenticated: true,
+          userId: userId,
         );
       });
       _persist();
+
+      // Загружаем колоды с сервера (для нового пользователя будет пустой список)
+      await _loadDecksFromServer();
+
+      if (!mounted) return;
 
       if (ctx != null) {
         ScaffoldMessenger.of(ctx).showSnackBar(

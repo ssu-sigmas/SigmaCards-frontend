@@ -504,5 +504,66 @@ class ApiService {
     final token = await getAccessToken();
     return token != null && token.isNotEmpty;
   }
+
+  // ==========================================
+  // DECKS API
+  // ==========================================
+
+  // Получить все колоды пользователя
+  static Future<Map<String, dynamic>> getUserDecks({int skip = 0, int limit = 100}) async {
+    final result = await get('/decks?skip=$skip&limit=$limit');
+    
+    if (result['success'] == true) {
+      final decksData = result['data'] as List;
+      return {
+        'success': true,
+        'decks': decksData,
+      };
+    } else {
+      return result;
+    }
+  }
+
+  // Получить одну колоду
+  static Future<Map<String, dynamic>> getDeck(String deckId) async {
+    return get('/decks/$deckId');
+  }
+
+  // Создать колоду
+  static Future<Map<String, dynamic>> createDeck({
+    required String title,
+    String? description,
+  }) async {
+    final body = <String, dynamic>{
+      'title': title,
+    };
+    
+    if (description != null && description.isNotEmpty) {
+      body['description'] = description;
+    }
+
+    return post('/decks', body: body);
+  }
+
+  // Обновить колоду
+  static Future<Map<String, dynamic>> updateDeck({
+    required String deckId,
+    String? title,
+    String? description,
+    String? status,
+  }) async {
+    final body = <String, dynamic>{};
+    
+    if (title != null) body['title'] = title;
+    if (description != null) body['description'] = description;
+    if (status != null) body['status'] = status;
+
+    return put('/decks/$deckId', body: body);
+  }
+
+  // Удалить колоду
+  static Future<Map<String, dynamic>> deleteDeck(String deckId) async {
+    return delete('/decks/$deckId');
+  }
 }
 

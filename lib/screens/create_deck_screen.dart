@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/deck.dart';
 import '../models/flashcard.dart';
 import '../models/enums.dart';
+import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
 import '../widgets/create_deck/deck_info_form.dart';
@@ -112,7 +113,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
     });
   }
 
-  void _save() {
+  Future<void> _save() async {
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
     if (name.isEmpty) {
@@ -128,8 +129,8 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
     final uuid = const Uuid();
     final now = DateTime.now();
     
-    // TODO: Получить userId из UserData или API
-    final userId = ''; // Будет заполнено при интеграции с API
+    // Получаем userId из ApiService (если пользователь авторизован)
+    final userId = await ApiService.getUserId() ?? '';
 
     final deck = Deck(
       id: uuid.v4(),
@@ -143,7 +144,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
       cards: validCards.map((c) {
         return Flashcard(
           id: uuid.v4(),
-          deckId: '', // Будет установлено после создания колоды
+          deckId: '', // Будет установлено после создания колоды на сервере
           cardType: CardType.keyTerms,
           content: {
             'front': c.front.trim(),
@@ -207,7 +208,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: _save,
+                    onPressed: () => _save(),
                     child: Text(
                       'Save',
                       style: TextStyle(
