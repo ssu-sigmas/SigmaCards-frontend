@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/deck.dart';
 import '../models/flashcard.dart';
 import '../models/card_with_deck.dart';
+import '../services/api_service.dart';
 import '../theme/app_styles.dart';
 import '../theme/app_colors.dart';
 
@@ -35,16 +36,42 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
   void initState() {
     super.initState();
     _updatedDecks = List.from(widget.decks);
-    _studyCards = _prepareStudyCards();
+    _loadStudyCards();
   }
 
-  List<CardWithDeck> _prepareStudyCards() {
+  Future<void> _loadStudyCards() async {
+    final cards = await _prepareStudyCards();
+    if (mounted) {
+      setState(() {
+        _studyCards = cards;
+      });
+    }
+  }
+
+  Future<List<CardWithDeck>> _prepareStudyCards() async {
     final allDueCards = <CardWithDeck>[];
 
     // TODO: Загрузить due cards через API /review/due
     // Пока используем все карточки из всех колод
     for (final deck in widget.decks) {
-      final cards = deck.cards ?? [];
+      List<Flashcard> cards = deck.cards ?? [];
+      
+      // Если карточки не загружены и пользователь авторизован, загружаем с сервера
+      if (cards.isEmpty && await ApiService.isAuthenticated()) {
+        try {
+          final result = await ApiService.getDeckCards(deckId: deck.id, limit: 100);
+          if (result['success'] == true) {
+            final cardsData = result['cards'] as List;
+            cards = cardsData
+                .map((cardJson) => Flashcard.fromJson(cardJson as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (e) {
+          // Ошибка загрузки - пропускаем эту колоду
+          continue;
+        }
+      }
+      
       for (final card in cards) {
         allDueCards.add(CardWithDeck(
           card: card,

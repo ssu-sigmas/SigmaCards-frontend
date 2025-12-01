@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:xml/xml.dart';
 
+import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
 import '../widgets/create_deck/flashcards_editor.dart';
@@ -20,7 +21,25 @@ class ImportTextScreen extends StatefulWidget {
 class _ImportTextScreenState extends State<ImportTextScreen> {
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
+  bool _isGenerating = false;
   String? _errorMessage;
+  bool _useMLGeneration = false;
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final authenticated = await ApiService.isAuthenticated();
+    if (mounted) {
+      setState(() {
+        _isAuthenticated = authenticated;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -107,7 +126,7 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
     }
   }
 
-  void _handleContinue() {
+  Future<void> _handleContinue() async {
     final rawText = _textController.text.trim();
     if (rawText.isEmpty) {
       setState(() {
@@ -116,15 +135,68 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
       return;
     }
 
-    final drafts = _generateDrafts(rawText);
-    if (drafts.isEmpty) {
-      setState(() {
-        _errorMessage = 'Не удалось преобразовать текст в карточки. Попробуйте отредактировать текст.';
-      });
-      return;
-    }
+    // Если выбрана ML генерация и пользователь авторизован
+    if (_useMLGeneration && await ApiService.isAuthenticated()) {
+      await _generateWithML(rawText);
+    } else {
+      // Простой парсинг текста
+      final drafts = _generateDrafts(rawText);
+      if (drafts.isEmpty) {
+        setState(() {
+          _errorMessage = 'Не удалось преобразовать текст в карточки. Попробуйте отредактировать текст.';
+        });
+        return;
+      }
 
-    Navigator.of(context).pop(drafts);
+      Navigator.of(context).pop(drafts);
+    }
+  }
+
+  Future<void> _generateWithML(String text) async {
+    setState(() {
+      _isGenerating = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await ApiService.generateCards(
+        text: text,
+        count: 10, // Генерируем до 10 карточек
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        final cardsData = result['cards'] as List;
+        final drafts = cardsData.map((cardJson) {
+          final content = cardJson['content'] as Map<String, dynamic>;
+          return FlashcardDraft(
+            front: content['front'] as String? ?? '',
+            back: content['back'] as String? ?? '',
+          );
+        }).toList();
+
+        if (drafts.isNotEmpty) {
+          Navigator.of(context).pop(drafts);
+        } else {
+          setState(() {
+            _errorMessage = 'ML сервис не сгенерировал карточки. Попробуйте использовать простой режим.';
+            _isGenerating = false;
+          });
+        }
+      } else {
+        setState(() {
+          _errorMessage = result['error'] as String? ?? 'Ошибка генерации карточек';
+          _isGenerating = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Ошибка: ${e.toString()}';
+        _isGenerating = false;
+      });
+    }
   }
 
   List<FlashcardDraft> _generateDrafts(String text) {
@@ -264,11 +336,43 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
                 ],
               ),
               const SizedBox(height: 12),
+              // Переключатель ML генерации
+              if (_isAuthenticated)
+                Card(
+                  color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                  child: SwitchListTile(
+                    title: const Text('Использовать AI генерацию'),
+                    subtitle: const Text('Создать карточки с помощью искусственного интеллекта'),
+                    value: _useMLGeneration,
+                    onChanged: (value) {
+                      setState(() {
+                        _useMLGeneration = value;
+                      });
+                    },
+                  ),
+                ),
+              if (_isAuthenticated) const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _isLoading ? null : _handleContinue,
-                  child: const Text('Продолжить к созданию карточек'),
+                  onPressed: (_isLoading || _isGenerating) ? null : _handleContinue,
+                  child: _isGenerating
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Text('Генерация карточек...'),
+                          ],
+                        )
+                      : const Text('Продолжить к созданию карточек'),
                 ),
               ),
             ],

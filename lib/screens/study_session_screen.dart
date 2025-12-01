@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/deck.dart';
 import '../models/flashcard.dart';
+import '../services/api_service.dart';
 import '../theme/app_styles.dart';
 import '../theme/app_colors.dart';
 
@@ -19,18 +20,65 @@ class StudySessionScreen extends StatefulWidget {
 }
 
 class _StudySessionScreenState extends State<StudySessionScreen> {
-  late List<Flashcard> _studyCards;
+  List<Flashcard> _studyCards = [];
   int _currentIndex = 0;
   bool _isFlipped = false;
   int _completed = 0;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // TODO: Загрузить due cards через API /review/due
-    // Пока используем все карточки, если они есть
-    final cards = widget.deck.cards ?? [];
-    _studyCards = cards.isNotEmpty ? List.from(cards) : [];
+    _loadCards();
+  }
+
+  Future<void> _loadCards() async {
+    // Если карточки уже загружены локально, используем их
+    if (widget.deck.cards != null && widget.deck.cards!.isNotEmpty) {
+      setState(() {
+        _studyCards = List.from(widget.deck.cards!);
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Если пользователь авторизован, загружаем карточки с сервера
+    if (await ApiService.isAuthenticated()) {
+      try {
+        final result = await ApiService.getDeckCards(deckId: widget.deck.id, limit: 100);
+        
+        if (mounted) {
+          if (result['success'] == true) {
+            final cardsData = result['cards'] as List;
+            final cards = cardsData
+                .map((cardJson) => Flashcard.fromJson(cardJson as Map<String, dynamic>))
+                .toList();
+            
+            setState(() {
+              _studyCards = cards;
+              _isLoading = false;
+            });
+          } else {
+            setState(() {
+              _studyCards = [];
+              _isLoading = false;
+            });
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _studyCards = [];
+            _isLoading = false;
+          });
+        }
+      }
+    } else {
+      setState(() {
+        _studyCards = [];
+        _isLoading = false;
+      });
+    }
   }
 
   Flashcard? get _current => _currentIndex < _studyCards.length ? _studyCards[_currentIndex] : null;
@@ -78,9 +126,16 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (_current == null) {
+    if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Study')),
+        appBar: AppBar(title: Text(widget.deck.title)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_studyCards.isEmpty || _current == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.deck.title)),
         body: const Center(child: Text('No cards to study')),
       );
     }

@@ -565,5 +565,136 @@ class ApiService {
   static Future<Map<String, dynamic>> deleteDeck(String deckId) async {
     return delete('/decks/$deckId');
   }
+
+  // ==========================================
+  // CARDS API
+  // ==========================================
+
+  // Получить карточки колоды
+  static Future<Map<String, dynamic>> getDeckCards({
+    required String deckId,
+    int skip = 0,
+    int limit = 100,
+  }) async {
+    final result = await get('/cards/decks/$deckId/cards?skip=$skip&limit=$limit');
+    
+    if (result['success'] == true) {
+      final cardsData = result['data'] as List;
+      return {
+        'success': true,
+        'cards': cardsData,
+      };
+    } else {
+      return result;
+    }
+  }
+
+  // Получить одну карточку
+  static Future<Map<String, dynamic>> getCard(String cardId) async {
+    return get('/cards/$cardId');
+  }
+
+  // Создать карточку в колоде
+  static Future<Map<String, dynamic>> createCard({
+    required String deckId,
+    required Map<String, dynamic> content,
+    String cardType = 'key_terms',
+    int position = 0,
+  }) async {
+    final body = <String, dynamic>{
+      'content': content,
+      'card_type': cardType,
+      'position': position,
+    };
+
+    return post('/cards/decks/$deckId/cards', body: body);
+  }
+
+  // Создать несколько карточек в колоде
+  static Future<Map<String, dynamic>> createCards({
+    required String deckId,
+    required List<Map<String, dynamic>> cards,
+  }) async {
+    // Создаем карточки последовательно
+    final results = <Map<String, dynamic>>[];
+    String? lastError;
+
+    for (var i = 0; i < cards.length; i++) {
+      final card = cards[i];
+      final result = await createCard(
+        deckId: deckId,
+        content: card['content'] as Map<String, dynamic>,
+        cardType: card['card_type'] as String? ?? 'key_terms',
+        position: card['position'] as int? ?? i,
+      );
+
+      if (result['success'] == true) {
+        results.add(result['data'] as Map<String, dynamic>);
+      } else {
+        lastError = result['error'] as String?;
+        // Продолжаем создавать остальные карточки даже при ошибке
+      }
+    }
+
+    if (results.isEmpty && lastError != null) {
+      return {
+        'success': false,
+        'error': lastError,
+      };
+    }
+
+    return {
+      'success': true,
+      'cards': results,
+      'created': results.length,
+      'total': cards.length,
+    };
+  }
+
+  // Обновить карточку
+  static Future<Map<String, dynamic>> updateCard({
+    required String cardId,
+    Map<String, dynamic>? content,
+    String? cardType,
+    int? position,
+    bool? isSuspended,
+  }) async {
+    final body = <String, dynamic>{};
+    
+    if (content != null) body['content'] = content;
+    if (cardType != null) body['card_type'] = cardType;
+    if (position != null) body['position'] = position;
+    if (isSuspended != null) body['is_suspended'] = isSuspended;
+
+    return put('/cards/$cardId', body: body);
+  }
+
+  // Удалить карточку
+  static Future<Map<String, dynamic>> deleteCard(String cardId) async {
+    return delete('/cards/$cardId');
+  }
+
+  // Генерировать карточки через ML
+  static Future<Map<String, dynamic>> generateCards({
+    required String text,
+    int count = 5,
+  }) async {
+    final body = <String, dynamic>{
+      'text': text,
+      'count': count.clamp(1, 20),
+    };
+
+    final result = await post('/cards/generate', body: body);
+    
+    if (result['success'] == true) {
+      final cardsData = result['data'] as List;
+      return {
+        'success': true,
+        'cards': cardsData,
+      };
+    } else {
+      return result;
+    }
+  }
 }
 

@@ -8,6 +8,7 @@ import 'screens/quick_study_session_screen.dart';
 import 'screens/import_text_screen.dart';
 import 'models/user_data.dart';
 import 'models/deck.dart';
+import 'models/flashcard.dart';
 import 'services/storage_service.dart';
 import 'services/api_service.dart';
 import 'widgets/create_deck/flashcards_editor.dart';
@@ -187,17 +188,61 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
         final deckData = result['data'] as Map<String, dynamic>;
         final createdDeck = Deck.fromJson(deckData);
         
-        // Если есть карточки, создаем их отдельно
+        // Если есть карточки, создаем их через API
         if (deck.cards != null && deck.cards!.isNotEmpty) {
-          // TODO: Создать карточки через API
-          // Пока добавляем колоду без карточек
-        }
+          final cardsToCreate = deck.cards!.map((card) => {
+            'content': card.content,
+            'card_type': card.cardType.value,
+            'position': card.position,
+          }).toList();
 
-        setState(() {
-          _userData = _userData.copyWith(
-            decks: [..._userData.decks, createdDeck],
+          final cardsResult = await ApiService.createCards(
+            deckId: createdDeck.id,
+            cards: cardsToCreate,
           );
-        });
+
+          if (cardsResult['success'] == true) {
+            final createdCards = (cardsResult['cards'] as List)
+                .map((cardJson) => Flashcard.fromJson(cardJson as Map<String, dynamic>))
+                .toList();
+            
+            // Обновляем колоду с созданными карточками
+            final deckWithCards = createdDeck.copyWith(
+              cards: createdCards,
+              flashcardsCount: createdCards.length,
+            );
+
+            setState(() {
+              _userData = _userData.copyWith(
+                decks: [..._userData.decks, deckWithCards],
+              );
+            });
+          } else {
+            // Карточки не созданы, но колода создана
+            setState(() {
+              _userData = _userData.copyWith(
+                decks: [..._userData.decks, createdDeck],
+              );
+            });
+            
+            if (ctx != null) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(
+                  content: Text('Колода создана, но некоторые карточки не удалось создать: ${cardsResult['error']}'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+          }
+        } else {
+          // Нет карточек, просто добавляем колоду
+          setState(() {
+            _userData = _userData.copyWith(
+              decks: [..._userData.decks, createdDeck],
+            );
+          });
+        }
+        
         _persist();
 
         if (ctx != null) {
@@ -234,12 +279,39 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     }
   }
 
-  void _studyDeck(Deck deck) {
+  void _studyDeck(Deck deck) async {
+    // Если карточки не загружены и пользователь авторизован, загружаем их
+    Deck deckToStudy = deck;
+    if ((deck.cards == null || deck.cards!.isEmpty) && 
+        _userData.isAuthenticated && 
+        await ApiService.isAuthenticated()) {
+      try {
+        final result = await ApiService.getDeckCards(deckId: deck.id, limit: 100);
+        if (result['success'] == true) {
+          final cardsData = result['cards'] as List;
+          final cards = cardsData
+              .map((cardJson) => Flashcard.fromJson(cardJson as Map<String, dynamic>))
+              .toList();
+          
+          deckToStudy = deck.copyWith(cards: cards);
+        }
+      } catch (e) {
+        // Ошибка загрузки - используем колоду без карточек
+      }
+    }
+
+    if (!mounted) return;
+    
     _navigatorKey.currentState?.push(
       MaterialPageRoute(
         builder: (context) => StudySessionScreen(
-          deck: deck,
-          onComplete: (updatedDeck) {
+          deck: deckToStudy,
+          onComplete: (updatedDeck) async {
+            // Если пользователь авторизован, обновляем колоду на сервере
+            if (_userData.isAuthenticated && await ApiService.isAuthenticated()) {
+              // TODO: Обновить карточки через API при необходимости
+            }
+            
             setState(() {
               _userData = _userData.copyWith(
                 decks: _userData.decks.map((d) => d.id == updatedDeck.id ? updatedDeck : d).toList(),
