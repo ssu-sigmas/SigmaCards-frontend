@@ -6,11 +6,13 @@ class CardWithDeck {
   final Flashcard card;
   final String deckId;
   final String deckName;
+  final String? userCardId; // UUID UserCard для отправки оценок через API
 
   CardWithDeck({
     required this.card,
     required this.deckId,
     required this.deckName,
+    this.userCardId,
   });
 }
 

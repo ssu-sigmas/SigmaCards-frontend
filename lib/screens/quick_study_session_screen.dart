@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/deck.dart';
 import '../models/flashcard.dart';
+import '../models/due_card.dart';
+import '../models/enums.dart';
 import '../models/card_with_deck.dart';
 import '../services/api_service.dart';
 import '../theme/app_styles.dart';
@@ -31,6 +33,7 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
   int _currentIndex = 0;
   bool _isFlipped = false;
   int _completed = 0;
+  DateTime? _cardStartTime; // Для отслеживания времени ответа
 
   @override
   void initState() {
@@ -51,33 +54,68 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
   Future<List<CardWithDeck>> _prepareStudyCards() async {
     final allDueCards = <CardWithDeck>[];
 
-    // TODO: Загрузить due cards через API /review/due
-    // Пока используем все карточки из всех колод
-    for (final deck in widget.decks) {
-      List<Flashcard> cards = deck.cards ?? [];
-      
-      // Если карточки не загружены и пользователь авторизован, загружаем с сервера
-      if (cards.isEmpty && await ApiService.isAuthenticated()) {
-        try {
-          final result = await ApiService.getDeckCards(deckId: deck.id, limit: 100);
-          if (result['success'] == true) {
-            final cardsData = result['cards'] as List;
-            cards = cardsData
-                .map((cardJson) => Flashcard.fromJson(cardJson as Map<String, dynamic>))
-                .toList();
+    // Если пользователь авторизован, загружаем due cards с сервера
+    if (await ApiService.isAuthenticated()) {
+      try {
+        // Загружаем due cards для всех колод или конкретной колоды
+        final result = await ApiService.getDueCards(limit: 100);
+        
+        if (result['success'] == true) {
+          final cardsData = result['cards'] as List;
+          final dueCards = cardsData
+              .map((cardJson) => DueCard.fromJson(cardJson as Map<String, dynamic>))
+              .toList();
+          
+          // Находим колоды для каждой карточки
+          for (final dueCard in dueCards) {
+            // Ищем колоду по cardId в загруженных карточках
+            Deck? foundDeck;
+            for (final deck in widget.decks) {
+              if (deck.cards?.any((c) => c.id == dueCard.cardId) ?? false) {
+                foundDeck = deck;
+                break;
+              }
+            }
+            
+            // Если не нашли, используем первую колоду как fallback
+            final deck = foundDeck ?? widget.decks.first;
+            
+            // Конвертируем DueCard в Flashcard для совместимости с CardWithDeck
+            final flashcard = Flashcard(
+              id: dueCard.cardId,
+              deckId: deck.id,
+              cardType: CardType.keyTerms, // По умолчанию
+              content: dueCard.content,
+              position: 0,
+              isSuspended: false,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            );
+            
+            allDueCards.add(CardWithDeck(
+              card: flashcard,
+              deckId: deck.id,
+              deckName: deck.title,
+              userCardId: dueCard.userCardId, // Сохраняем userCardId для отправки оценок
+            ));
           }
-        } catch (e) {
-          // Ошибка загрузки - пропускаем эту колоду
-          continue;
         }
+      } catch (e) {
+        // Ошибка загрузки - используем локальные карточки
       }
-      
-      for (final card in cards) {
-        allDueCards.add(CardWithDeck(
-          card: card,
-          deckId: deck.id,
-          deckName: deck.title,
-        ));
+    }
+    
+    // Если due cards не загружены или пользователь не авторизован, используем локальные карточки
+    if (allDueCards.isEmpty) {
+      for (final deck in widget.decks) {
+        final cards = deck.cards ?? [];
+        for (final card in cards) {
+          allDueCards.add(CardWithDeck(
+            card: card,
+            deckId: deck.id,
+            deckName: deck.title,
+          ));
+        }
       }
     }
 
@@ -91,14 +129,69 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
   CardWithDeck? get _current => 
       _currentIndex < _studyCards.length ? _studyCards[_currentIndex] : null;
 
-  void _flip() => setState(() => _isFlipped = !_isFlipped);
+  void _flip() {
+    setState(() {
+      _isFlipped = !_isFlipped;
+      if (!_isFlipped && _cardStartTime == null) {
+        // Начинаем отслеживать время, когда карточка перевернута
+        _cardStartTime = DateTime.now();
+      }
+    });
+  }
 
-  void _handleDifficulty(_Difficulty d) {
+  Future<void> _handleDifficulty(_Difficulty d) async {
     if (_current == null) return;
     
-    final updatedCard = _calculateNextReview(_current!.card, d);
+    final cardWithDeck = _current!;
+    final rating = _difficultyToRating(d);
+    
+    // Вычисляем время ответа
+    final durationMs = _cardStartTime != null
+        ? DateTime.now().difference(_cardStartTime!).inMilliseconds
+        : 0;
 
-    // TODO: Отправить оценку через API /review/{user_card_id}
+    // Если есть userCardId, отправляем оценку на сервер
+    if (cardWithDeck.userCardId != null && 
+        cardWithDeck.userCardId!.isNotEmpty && 
+        await ApiService.isAuthenticated()) {
+      try {
+        final result = await ApiService.submitReview(
+          userCardId: cardWithDeck.userCardId!,
+          rating: rating,
+          durationMs: durationMs,
+        );
+
+        if (result['success'] == true) {
+          // Оценка успешно отправлена, FSRS обновлен на сервере
+        } else {
+          // Ошибка отправки - показываем сообщение, но продолжаем
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['error'] ?? 'Ошибка отправки оценки'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        // Ошибка сети - продолжаем локально
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ошибка сети: ${e.toString()}'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    }
+
+    // Обновляем локальное состояние (для совместимости)
+    final updatedCard = _calculateNextReview(cardWithDeck.card, d);
+
     // Обновляем колоду, которая содержит эту карточку
     _updatedDecks = _updatedDecks.map((deck) {
       if (deck.id == _current!.deckId) {
@@ -118,8 +211,9 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
     // Обновляем карточку в списке для отображения
     final updatedCardWithDeck = CardWithDeck(
       card: updatedCard,
-      deckId: _current!.deckId,
-      deckName: _current!.deckName,
+      deckId: cardWithDeck.deckId,
+      deckName: cardWithDeck.deckName,
+      userCardId: cardWithDeck.userCardId,
     );
     _studyCards[_currentIndex] = updatedCardWithDeck;
 
@@ -128,6 +222,7 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
         _currentIndex += 1;
         _isFlipped = false;
         _completed += 1;
+        _cardStartTime = null;
       });
     } else {
       // Сессия завершена
@@ -154,10 +249,21 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
     }
   }
 
+  int _difficultyToRating(_Difficulty d) {
+    switch (d) {
+      case _Difficulty.again:
+        return 1;
+      case _Difficulty.hard:
+        return 2;
+      case _Difficulty.good:
+        return 3;
+      case _Difficulty.easy:
+        return 4;
+    }
+  }
+
   Flashcard _calculateNextReview(Flashcard card, _Difficulty d) {
-    // TODO: Заменить на вызов API /review/{user_card_id} с FSRS алгоритмом
-    // Пока возвращаем карточку без изменений, так как FSRS параметры в UserCard
-    // Временная заглушка для совместимости
+    // Локальная заглушка для совместимости (FSRS обрабатывается на сервере)
     return card.copyWith(
       updatedAt: DateTime.now(),
     );

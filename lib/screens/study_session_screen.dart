@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/deck.dart';
 import '../models/flashcard.dart';
+import '../models/due_card.dart';
 import '../services/api_service.dart';
 import '../theme/app_styles.dart';
 import '../theme/app_colors.dart';
@@ -20,11 +21,12 @@ class StudySessionScreen extends StatefulWidget {
 }
 
 class _StudySessionScreenState extends State<StudySessionScreen> {
-  List<Flashcard> _studyCards = [];
+  List<DueCard> _studyCards = [];
   int _currentIndex = 0;
   bool _isFlipped = false;
   int _completed = 0;
   bool _isLoading = true;
+  DateTime? _cardStartTime; // Для отслеживания времени ответа
 
   @override
   void initState() {
@@ -33,29 +35,23 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   }
 
   Future<void> _loadCards() async {
-    // Если карточки уже загружены локально, используем их
-    if (widget.deck.cards != null && widget.deck.cards!.isNotEmpty) {
-      setState(() {
-        _studyCards = List.from(widget.deck.cards!);
-        _isLoading = false;
-      });
-      return;
-    }
-
-    // Если пользователь авторизован, загружаем карточки с сервера
+    // Если пользователь авторизован, загружаем due cards с сервера
     if (await ApiService.isAuthenticated()) {
       try {
-        final result = await ApiService.getDeckCards(deckId: widget.deck.id, limit: 100);
+        final result = await ApiService.getDueCards(
+          deckId: widget.deck.id,
+          limit: 100,
+        );
         
         if (mounted) {
           if (result['success'] == true) {
             final cardsData = result['cards'] as List;
-            final cards = cardsData
-                .map((cardJson) => Flashcard.fromJson(cardJson as Map<String, dynamic>))
+            final dueCards = cardsData
+                .map((cardJson) => DueCard.fromJson(cardJson as Map<String, dynamic>))
                 .toList();
             
             setState(() {
-              _studyCards = cards;
+              _studyCards = dueCards;
               _isLoading = false;
             });
           } else {
@@ -74,52 +70,127 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
         }
       }
     } else {
-      setState(() {
-        _studyCards = [];
-        _isLoading = false;
-      });
+      // Если не авторизован, используем локальные карточки
+      if (widget.deck.cards != null && widget.deck.cards!.isNotEmpty) {
+        // Конвертируем Flashcard в DueCard для совместимости
+        final dueCards = widget.deck.cards!.map((card) {
+          return DueCard(
+            userCardId: '', // Нет user_card_id для локальных карточек
+            cardId: card.id,
+            content: card.content,
+            state: 0,
+            stability: 0.0,
+            difficulty: 0.0,
+          );
+        }).toList();
+        
+        setState(() {
+          _studyCards = dueCards;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _studyCards = [];
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  Flashcard? get _current => _currentIndex < _studyCards.length ? _studyCards[_currentIndex] : null;
+  DueCard? get _current => _currentIndex < _studyCards.length ? _studyCards[_currentIndex] : null;
 
-  void _flip() => setState(() => _isFlipped = !_isFlipped);
+  void _flip() {
+    setState(() {
+      _isFlipped = !_isFlipped;
+      if (!_isFlipped && _cardStartTime == null) {
+        // Начинаем отслеживать время, когда карточка перевернута
+        _cardStartTime = DateTime.now();
+      }
+    });
+  }
 
-  void _handleDifficulty(_Difficulty d) {
+  Future<void> _handleDifficulty(_Difficulty d) async {
     if (_current == null) return;
     
-    // TODO: Отправить оценку через API /review/{user_card_id}
-    // Пока просто обновляем локально для совместимости
-    final updatedCard = _calculateNextReview(_current!, d);
-    final currentCards = widget.deck.cards ?? [];
-    final updatedCards = currentCards.map((c) => c.id == updatedCard.id ? updatedCard : c).toList();
-    final updatedDeck = widget.deck.copyWith(
-      cards: updatedCards,
-      updatedAt: DateTime.now(),
-    );
+    final dueCard = _current!;
+    final rating = _difficultyToRating(d);
+    
+    // Вычисляем время ответа
+    final durationMs = _cardStartTime != null
+        ? DateTime.now().difference(_cardStartTime!).inMilliseconds
+        : 0;
 
+    // Если есть userCardId, отправляем оценку на сервер
+    if (dueCard.userCardId.isNotEmpty && await ApiService.isAuthenticated()) {
+      try {
+        final result = await ApiService.submitReview(
+          userCardId: dueCard.userCardId,
+          rating: rating,
+          durationMs: durationMs,
+        );
+
+        if (result['success'] == true) {
+          // Оценка успешно отправлена, FSRS обновлен на сервере
+          // Просто переходим к следующей карточке
+        } else {
+          // Ошибка отправки - показываем сообщение, но продолжаем
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['error'] ?? 'Ошибка отправки оценки'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        // Ошибка сети - продолжаем локально
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ошибка сети: ${e.toString()}'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    }
+
+    // Обновляем локальное состояние
     if (_currentIndex < _studyCards.length - 1) {
       setState(() {
         _currentIndex += 1;
         _isFlipped = false;
         _completed += 1;
+        _cardStartTime = null;
       });
     } else {
       setState(() {
         _completed += 1;
       });
+      
+      // Обновляем колоду (для совместимости с локальным режимом)
+      final updatedDeck = widget.deck.copyWith(
+        updatedAt: DateTime.now(),
+      );
       widget.onComplete(updatedDeck);
       Navigator.of(context).pop();
     }
   }
 
-  Flashcard _calculateNextReview(Flashcard card, _Difficulty d) {
-    // TODO: Заменить на вызов API /review/{user_card_id} с FSRS алгоритмом
-    // Пока возвращаем карточку без изменений, так как FSRS параметры в UserCard
-    // Временная заглушка для совместимости
-    return card.copyWith(
-      updatedAt: DateTime.now(),
-    );
+  int _difficultyToRating(_Difficulty d) {
+    switch (d) {
+      case _Difficulty.again:
+        return 1;
+      case _Difficulty.hard:
+        return 2;
+      case _Difficulty.good:
+        return 3;
+      case _Difficulty.easy:
+        return 4;
+    }
   }
 
   @override
@@ -140,7 +211,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       );
     }
 
-    final progress = _studyCards.isEmpty ? 0.0 : _completed / _studyCards.length;
+    final progress = _studyCards.isEmpty ? 0.0 : (_completed + (_isFlipped ? 1 : 0)) / _studyCards.length;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : Colors.white,

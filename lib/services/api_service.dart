@@ -696,5 +696,66 @@ class ApiService {
       return result;
     }
   }
+
+  // ==========================================
+  // REVIEW API
+  // ==========================================
+
+  // Получить карточки на повтор (due cards)
+  static Future<Map<String, dynamic>> getDueCards({
+    String? deckId,
+    int limit = 20,
+  }) async {
+    final queryParams = <String, String>{
+      'limit': limit.clamp(1, 100).toString(),
+    };
+    
+    if (deckId != null) {
+      queryParams['deck_id'] = deckId;
+    }
+
+    final queryString = queryParams.entries
+        .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+    
+    final result = await get('/review/due?$queryString');
+    
+    if (result['success'] == true) {
+      final cardsData = result['data'] as List;
+      return {
+        'success': true,
+        'cards': cardsData,
+      };
+    } else {
+      return result;
+    }
+  }
+
+  // Отправить оценку карточки (1-4)
+  // rating: 1=Again, 2=Hard, 3=Good, 4=Easy
+  static Future<Map<String, dynamic>> submitReview({
+    required String userCardId,
+    required int rating, // 1-4
+    int durationMs = 0,
+  }) async {
+    if (rating < 1 || rating > 4) {
+      return {
+        'success': false,
+        'error': 'Rating must be between 1 and 4',
+      };
+    }
+
+    final body = <String, dynamic>{
+      'rating': rating,
+      'duration_ms': durationMs,
+    };
+
+    return post('/review/$userCardId', body: body);
+  }
+
+  // Получить историю повторений карточки
+  static Future<Map<String, dynamic>> getReviewHistory(String cardId) async {
+    return get('/review/history/$cardId');
+  }
 }
 
