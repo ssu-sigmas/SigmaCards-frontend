@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/deck.dart';
-import '../models/flashcard.dart';
 import '../models/due_card.dart';
 import '../services/api_service.dart';
 import '../theme/app_styles.dart';
@@ -222,7 +221,28 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
         padding: const EdgeInsets.all(AppStyles.defaultPadding),
         child: Column(
           children: [
-            LinearProgressIndicator(value: progress == 0 ? null : progress),
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress == 0 ? null : progress,
+                      minHeight: 6,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '$_completed/${_studyCards.length}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             Expanded(
               child: GestureDetector(
