@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/deck.dart';
@@ -272,6 +273,7 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final imageProvider = _imageFromDataUrl(_current?.card.content['image'] as String?);
 
     if (_current == null || _studyCards.isEmpty) {
       return Scaffold(
@@ -402,6 +404,18 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
+                        if (imageProvider != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image(
+                              image: imageProvider,
+                              height: 140,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         Text(
                           _isFlipped ? _current!.card.back : _current!.card.front,
                           textAlign: TextAlign.center,
@@ -513,6 +527,17 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
         ),
       ),
     );
+  }
+}
+
+ImageProvider? _imageFromDataUrl(String? dataUrl) {
+  if (dataUrl == null || dataUrl.isEmpty) return null;
+  final parts = dataUrl.split(',');
+  if (parts.length < 2) return null;
+  try {
+    return MemoryImage(base64Decode(parts.last));
+  } catch (_) {
+    return null;
   }
 }
 

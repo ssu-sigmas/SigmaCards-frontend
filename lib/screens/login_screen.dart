@@ -33,9 +33,25 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _checkAutoLogin() {
+    if (_isLoading) return;
+    
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
+    
+    final isDemoLogin = email == 'alina' || email == 'alina@mail.ru';
+    if (isDemoLogin && password == 'alina') {
+      _handleLogin();
+    }
+  }
+
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Email обязателен';
+    }
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'alina') {
+      return null;
     }
     final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
     if (!emailRegex.hasMatch(value)) {
@@ -167,6 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
+                  onChanged: (_) => _checkAutoLogin(),
                   decoration: InputDecoration(
                     labelText: 'Email',
                     hintText: 'your@email.com',
@@ -224,6 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _handleLogin(),
+                  onChanged: (_) => _checkAutoLogin(),
                   decoration: InputDecoration(
                     labelText: 'Пароль',
                     hintText: 'Введите пароль',

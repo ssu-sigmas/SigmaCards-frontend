@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/deck.dart';
 import '../models/due_card.dart';
@@ -195,6 +196,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final imageProvider = _imageFromDataUrl(_current?.content['image'] as String?);
 
     if (_isLoading) {
       return Scaffold(
@@ -268,6 +270,18 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
+                        if (imageProvider != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image(
+                              image: imageProvider,
+                              height: 140,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         Text(
                           _isFlipped ? _current!.back : _current!.front,
                           textAlign: TextAlign.center,
@@ -356,6 +370,17 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
 }
 
 enum _Difficulty { again, hard, good, easy }
+
+ImageProvider? _imageFromDataUrl(String? dataUrl) {
+  if (dataUrl == null || dataUrl.isEmpty) return null;
+  final parts = dataUrl.split(',');
+  if (parts.length < 2) return null;
+  try {
+    return MemoryImage(base64Decode(parts.last));
+  } catch (_) {
+    return null;
+  }
+}
 
 
 

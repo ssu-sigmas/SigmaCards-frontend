@@ -9,16 +9,20 @@ class DecksSection extends StatelessWidget {
   final UserData userData;
   final bool isDark;
   final VoidCallback onCreateDeck;
+  final Function(Deck) onEditDeck;
   final Function(Deck) onStudyDeck;
   final Function(String) onDeleteDeck;
+  final bool showSectionTitle;
 
   const DecksSection({
     super.key,
     required this.userData,
     required this.isDark,
     required this.onCreateDeck,
+    required this.onEditDeck,
     required this.onStudyDeck,
     required this.onDeleteDeck,
+    this.showSectionTitle = true,
   });
 
   @override
@@ -28,11 +32,13 @@ class DecksSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Your Decks',
-            style: AppStyles.sectionTitle(isDark),
-          ),
-          const SizedBox(height: AppStyles.sectionSpacing),
+          if (showSectionTitle) ...[
+            Text(
+              'Your Decks',
+              style: AppStyles.sectionTitle(isDark),
+            ),
+            const SizedBox(height: AppStyles.sectionSpacing),
+          ],
           userData.decks.isEmpty
               ? _buildEmptyState(context)
               : _buildDecksList(context),
@@ -91,6 +97,7 @@ class DecksSection extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: AppStyles.cardSpacing),
           child: DeckCard(
             deck: deck,
+            onEdit: () => onEditDeck(deck),
             onStudy: () => onStudyDeck(deck),
             onDelete: () => _showDeleteDialog(context, deck),
           ),

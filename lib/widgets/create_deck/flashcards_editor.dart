@@ -1,11 +1,27 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_styles.dart';
 
 class FlashcardDraft {
+  String? id;
   String front;
   String back;
-  FlashcardDraft({this.front = '', this.back = ''});
+  String? imageDataUrl;
+  DateTime? createdAt;
+  int position;
+
+  FlashcardDraft({
+    this.id,
+    this.front = '',
+    this.back = '',
+    this.imageDataUrl,
+    this.createdAt,
+    this.position = 0,
+  });
+
   bool get isValid => front.trim().isNotEmpty && back.trim().isNotEmpty;
 }
 
@@ -15,6 +31,7 @@ class FlashcardsEditor extends StatelessWidget {
   final VoidCallback onAddCard;
   final void Function(int index) onRemoveCard;
   final void Function(int index, String field, String value) onChange;
+  final void Function(int index, String? imageDataUrl) onImageChange;
 
   const FlashcardsEditor({
     super.key,
@@ -23,6 +40,7 @@ class FlashcardsEditor extends StatelessWidget {
     required this.onAddCard,
     required this.onRemoveCard,
     required this.onChange,
+    required this.onImageChange,
   });
 
   @override
@@ -54,6 +72,7 @@ class FlashcardsEditor extends StatelessWidget {
                 isDark: isDark,
                 onRemove: cards.length > 1 ? () => onRemoveCard(i) : null,
                 onChange: onChange,
+                onImageChange: onImageChange,
               ),
           ],
         ),
@@ -68,6 +87,7 @@ class _FlashcardItem extends StatelessWidget {
   final bool isDark;
   final VoidCallback? onRemove;
   final void Function(int index, String field, String value) onChange;
+  final void Function(int index, String? imageDataUrl) onImageChange;
 
   const _FlashcardItem({
     required this.index,
@@ -75,7 +95,45 @@ class _FlashcardItem extends StatelessWidget {
     required this.isDark,
     required this.onRemove,
     required this.onChange,
+    required this.onImageChange,
   });
+
+  Future<void> _pickImage(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.first;
+    final bytes = file.bytes;
+    if (bytes == null) return;
+
+    const maxSize = 2 * 1024 * 1024;
+    if (bytes.length > maxSize) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Изображение слишком большое (максимум 2MB)')),
+      );
+      return;
+    }
+
+    final ext = (file.extension ?? 'png').toLowerCase();
+    final mimeExt = ext == 'jpg' ? 'jpeg' : ext;
+    final encoded = base64Encode(bytes);
+    final dataUrl = 'data:image/$mimeExt;base64,$encoded';
+    onImageChange(index, dataUrl);
+  }
+
+  Uint8List? _decodeImageBytes(String? dataUrl) {
+    if (dataUrl == null || dataUrl.isEmpty) return null;
+    final parts = dataUrl.split(',');
+    if (parts.length < 2) return null;
+    try {
+      return base64Decode(parts.last);
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +179,47 @@ class _FlashcardItem extends StatelessWidget {
               onChanged: (v) => onChange(index, 'back', v),
               minLines: 2,
             ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _pickImage(context),
+                    icon: const Icon(Icons.image_outlined),
+                    label: Text(data.imageDataUrl == null ? 'Добавить картинку' : 'Изменить картинку'),
+                  ),
+                  if (data.imageDataUrl != null)
+                    TextButton.icon(
+                      onPressed: () => onImageChange(index, null),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      label: const Text('Удалить', style: TextStyle(color: Colors.red)),
+                    ),
+                ],
+              ),
+            ),
+            if (data.imageDataUrl != null) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 180),
+                  width: double.infinity,
+                  color: isDark ? Colors.grey[900] : Colors.grey[100],
+                  child: _decodeImageBytes(data.imageDataUrl) != null
+                      ? Image.memory(
+                          _decodeImageBytes(data.imageDataUrl)!,
+                          fit: BoxFit.cover,
+                        )
+                      : const SizedBox(
+                          height: 80,
+                          child: Center(child: Text('Не удалось отобразить изображение')),
+                        ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -7,13 +7,11 @@ import '../../theme/app_styles.dart';
 class HeaderSection extends StatelessWidget {
   final UserData userData;
   final bool isDark;
-  final VoidCallback onToggleTheme;
 
   const HeaderSection({
     super.key,
     required this.userData,
     required this.isDark,
-    required this.onToggleTheme,
   });
 
   @override
@@ -32,40 +30,32 @@ class HeaderSection extends StatelessWidget {
           bottomRight: Radius.circular(AppStyles.headerBorderRadius),
         ),
       ),
-      padding: const EdgeInsets.all(AppStyles.defaultPadding),
+      padding: const EdgeInsets.fromLTRB(
+        AppStyles.defaultPadding,
+        12,
+        AppStyles.defaultPadding,
+        AppStyles.defaultPadding,
+      ),
       child: Column(
         children: [
-          _buildHeaderRow(),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('SigmaCards', style: AppStyles.headerTitle),
+                    const SizedBox(height: 4),
+                    Text('Keep learning every day', style: AppStyles.headerSubtitle),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: AppStyles.defaultPadding),
           _buildStatsRow(),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeaderRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('SigmaCards', style: AppStyles.headerTitle),
-            const SizedBox(height: 4),
-            Text('Keep learning every day', style: AppStyles.headerSubtitle),
-          ],
-        ),
-        IconButton(
-          onPressed: onToggleTheme,
-          icon: Icon(
-            isDark ? Icons.wb_sunny : Icons.dark_mode,
-            color: Colors.white,
-          ),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white.withOpacity(0.2),
-          ),
-        ),
-      ],
     );
   }
 

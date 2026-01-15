@@ -14,12 +14,14 @@ class CreateDeckScreen extends StatefulWidget {
   final Function(Deck) onSave;
   final VoidCallback onCancel;
   final List<FlashcardDraft>? initialCards;
+  final Deck? initialDeck;
 
   const CreateDeckScreen({
     super.key,
     required this.onSave,
     required this.onCancel,
     this.initialCards,
+    this.initialDeck,
   });
 
   @override
@@ -35,12 +37,30 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
   @override
   void initState() {
     super.initState();
-    _cards = widget.initialCards != null && widget.initialCards!.isNotEmpty
-        ? widget.initialCards!
-            .map((card) => FlashcardDraft(
+    if (widget.initialDeck != null) {
+      final deck = widget.initialDeck!;
+      _nameController.text = deck.title;
+      _descriptionController.text = deck.description ?? '';
+      _cards = (deck.cards != null && deck.cards!.isNotEmpty)
+          ? deck.cards!
+              .map(
+                (card) => FlashcardDraft(
+                  id: card.id,
                   front: card.front,
                   back: card.back,
-                ))
+                  imageDataUrl: card.content['image'] as String?,
+                  createdAt: card.createdAt,
+                  position: card.position,
+                ),
+              )
+              .toList()
+          : [FlashcardDraft()];
+      return;
+    }
+
+    _cards = widget.initialCards != null && widget.initialCards!.isNotEmpty
+        ? widget.initialCards!
+            .map((card) => FlashcardDraft(front: card.front, back: card.back))
             .toList()
         : [FlashcardDraft()];
   }
@@ -57,6 +77,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
     if (_descriptionController.text.trim().isNotEmpty) return true;
     for (final c in _cards) {
       if (c.front.trim().isNotEmpty || c.back.trim().isNotEmpty) return true;
+      if ((c.imageDataUrl ?? '').isNotEmpty) return true;
     }
     return false;
   }
@@ -113,6 +134,12 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
     });
   }
 
+  void _handleImageChange(int index, String? imageDataUrl) {
+    setState(() {
+      _cards[index].imageDataUrl = imageDataUrl;
+    });
+  }
+
   Future<void> _save() async {
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
@@ -128,31 +155,36 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
 
     final uuid = const Uuid();
     final now = DateTime.now();
+    final isEditing = widget.initialDeck != null;
     
     // Получаем userId из ApiService (если пользователь авторизован)
-    final userId = await ApiService.getUserId() ?? '';
+    final userId = isEditing
+        ? widget.initialDeck!.userId
+        : (await ApiService.getUserId() ?? '');
 
     final deck = Deck(
-      id: uuid.v4(),
+      id: isEditing ? widget.initialDeck!.id : uuid.v4(),
       userId: userId,
       title: name,
       description: description.isEmpty ? null : description,
-      status: DeckStatus.private,
-      createdAt: now,
+      status: isEditing ? widget.initialDeck!.status : DeckStatus.private,
+      createdAt: isEditing ? widget.initialDeck!.createdAt : now,
       updatedAt: now,
       flashcardsCount: validCards.length,
-      cards: validCards.map((c) {
+      cards: validCards.asMap().entries.map((entry) {
+        final c = entry.value;
         return Flashcard(
-          id: uuid.v4(),
-          deckId: '', // Будет установлено после создания колоды на сервере
+          id: c.id ?? uuid.v4(),
+          deckId: widget.initialDeck?.id ?? '',
           cardType: CardType.keyTerms,
           content: {
             'front': c.front.trim(),
             'back': c.back.trim(),
+            if ((c.imageDataUrl ?? '').isNotEmpty) 'image': c.imageDataUrl,
           },
-          position: 0,
+          position: entry.key,
           isSuspended: false,
-          createdAt: now,
+          createdAt: c.createdAt ?? now,
           updatedAt: now,
         );
       }).toList(),
@@ -199,7 +231,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
                   ),
                   Expanded(
                     child: Text(
-                      'Create Deck',
+                      widget.initialDeck != null ? 'Edit Deck' : 'Create Deck',
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black87,
                         fontSize: 18,
@@ -249,6 +281,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
                       onAddCard: _handleAddCard,
                       onRemoveCard: _handleRemoveCard,
                       onChange: _handleCardChange,
+                      onImageChange: _handleImageChange,
                     ),
                   ],
                 ),

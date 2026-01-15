@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_shell_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/create_deck_screen.dart';
@@ -133,6 +133,34 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
                   const SnackBar(content: Text('Deck created successfully')),
                 );
               }
+            }
+            _navigatorKey.currentState?.pop();
+          },
+          onCancel: () {
+            _navigatorKey.currentState?.pop();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _editDeck(Deck deck) {
+    _navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (context) => CreateDeckScreen(
+          initialDeck: deck,
+          onSave: (updatedDeck) {
+            setState(() {
+              _userData = _userData.copyWith(
+                decks: _userData.decks.map((d) => d.id == updatedDeck.id ? updatedDeck : d).toList(),
+              );
+            });
+            _persist();
+            final ctx = _navigatorKey.currentContext;
+            if (ctx != null) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                const SnackBar(content: Text('Колода обновлена')),
+              );
             }
             _navigatorKey.currentState?.pop();
           },
@@ -449,6 +477,32 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
   Future<void> _handleLogin(String email, String password) async {
     final ctx = _navigatorKey.currentContext;
     
+    // Демо-режим: пропускаем API для тестового аккаунта
+    final normalizedLogin = email.trim().toLowerCase();
+    final isDemoLogin = normalizedLogin == 'alina' || normalizedLogin == 'alina@mail.ru';
+    if (isDemoLogin && password == 'alina') {
+      // Успешный вход в демо-режиме
+      setState(() {
+        _userData = _userData.copyWith(
+          isAuthenticated: true,
+          userId: 'demo-user-id',
+        );
+      });
+      _persist();
+
+      if (!mounted) return;
+
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+            content: Text('Вход выполнен (демо-режим)'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      return;
+    }
+    
     // Показываем индикатор загрузки
     if (ctx != null) {
       ScaffoldMessenger.of(ctx).showSnackBar(
@@ -605,6 +659,54 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     }
   }
 
+  Future<void> _handleLogout() async {
+    final ctx = _navigatorKey.currentContext;
+    
+    // Показываем диалог подтверждения
+    if (ctx != null) {
+      final confirmed = await showDialog<bool>(
+        context: ctx,
+        builder: (context) => AlertDialog(
+          title: const Text('Выход'),
+          content: const Text('Вы уверены, что хотите выйти?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Выйти'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+    }
+
+    // Очищаем токены
+    await ApiService.clearTokens();
+
+    // Сбрасываем авторизацию
+    setState(() {
+      _userData = _userData.copyWith(
+        isAuthenticated: false,
+        userId: null,
+      );
+    });
+    _persist();
+
+    if (ctx != null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(
+          content: Text('Вы вышли из аккаунта'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -637,14 +739,16 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
                   onRegister: _handleRegister,
                 )
               : _userData.hasCompletedOnboarding
-                  ? HomeScreen(
+                  ? MainShellScreen(
                       userData: _userData,
                       onCreateDeck: () => _createDeck(),
+                      onEditDeck: _editDeck,
                       onStudyDeck: _studyDeck,
                       onQuickStudy: _quickStudy,
                       onDeleteDeck: _deleteDeck,
                       onAIImport: _aiImport,
                       onToggleTheme: _toggleTheme,
+                      onLogout: _handleLogout,
                     )
                   : OnboardingScreen(
                       onComplete: _completeOnboarding,
