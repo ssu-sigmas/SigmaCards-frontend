@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/user_data.dart';
-import '../../widgets/stat_card.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_styles.dart';
+import '../sigma_mascot.dart';
 
 class HeaderSection extends StatelessWidget {
   final UserData userData;
@@ -37,58 +37,120 @@ class HeaderSection extends StatelessWidget {
         AppStyles.defaultPadding,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('SigmaCards', style: AppStyles.headerTitle),
-                    const SizedBox(height: 4),
-                    Text('Keep learning every day', style: AppStyles.headerSubtitle),
-                  ],
+                child: Text(
+                  'СигмаКарточки',
+                  style: AppStyles.headerTitle,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppStyles.defaultPadding),
-          _buildStatsRow(),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          '🔥',
+                          style: TextStyle(
+                            fontSize: 28,
+                            height: 1.1,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${userData.studyStreak}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            _streakLabel(userData.studyStreak),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.88),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              height: 1.1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Ученье — свет',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 6,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'В этом свете — сила разума и путь сквозь тьму неведения.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            height: 1.35,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Transform.translate(
+                offset: const Offset(-12, 0),
+                child: const SigmaMascot(size: 118),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatsRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: StatCard(
-            icon: Icons.local_fire_department,
-            iconColor: AppColors.streakIconColor,
-            value: '${userData.studyStreak}',
-            label: 'Day Streak',
-          ),
-        ),
-        const SizedBox(width: AppStyles.sectionSpacing),
-        Expanded(
-          child: StatCard(
-            icon: Icons.calendar_today,
-            iconColor: AppColors.dueIconColor,
-            value: '${userData.dueCardsCount}',
-            label: 'Due Today',
-          ),
-        ),
-        const SizedBox(width: AppStyles.sectionSpacing),
-        Expanded(
-          child: StatCard(
-            icon: Icons.psychology,
-            iconColor: AppColors.decksIconColor,
-            value: '${userData.decks.length}',
-            label: 'Your Decks',
-          ),
-        ),
-      ],
-    );
+  /// «1 день подряд», «2 дня подряд», «5 дней подряд» и т.д.
+  static String _streakLabel(int n) {
+    final m10 = n % 10;
+    final m100 = n % 100;
+    if (m100 >= 11 && m100 <= 14) return 'дней подряд';
+    if (m10 == 1) return 'день подряд';
+    if (m10 >= 2 && m10 <= 4) return 'дня подряд';
+    return 'дней подряд';
   }
 }

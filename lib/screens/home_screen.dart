@@ -5,7 +5,6 @@ import '../theme/app_colors.dart';
 import '../widgets/home/header_section.dart';
 import '../widgets/home/quick_study_button.dart';
 import '../widgets/home/quick_actions_section.dart';
-import '../widgets/sigma_mascot.dart';
 
 /// Контент вкладки «Главная» (без собственного Scaffold — его даёт [MainShellScreen]).
 class HomeScreen extends StatelessWidget {
@@ -39,12 +38,12 @@ class HomeScreen extends StatelessWidget {
       color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
       child: SizedBox.expand(
         child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -107,45 +106,12 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 12, 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Ученье — свет',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.2,
-                                ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'В этом свете — сила разума и путь сквозь тьму неведения.',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                  height: 1.35,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const SigmaMascot(size: 140),
-                  ],
-                ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),
