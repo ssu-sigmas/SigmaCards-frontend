@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/user_data.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_styles.dart';
+import '../../utils/ru_plural.dart';
 
 class QuickStudyButton extends StatelessWidget {
   final UserData userData;
@@ -51,17 +52,39 @@ class QuickStudyButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Icon(Icons.bolt, color: Colors.white, size: 24),
-                const SizedBox(width: AppStyles.sectionSpacing),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.14),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Start quick learning session',
+                        'Повторить на сегодня',
                         style: AppStyles.quickStudyTitle.copyWith(
-                          fontSize: 15,
+                          fontSize: 16,
                           height: 1.25,
                         ),
                         maxLines: 2,
@@ -69,10 +92,8 @@ class QuickStudyButton extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         !hasCards
-                            ? 'Add cards to a deck to begin'
-                            : userData.dueCardsCount > 0
-                                ? '${userData.dueCardsCount} cards ready'
-                                : 'Review all cards',
+                            ? 'Добавьте карточки в колоду'
+                            : ruCardCountLabel(userData.dueCardsCount),
                         style: AppStyles.quickStudySubtitle,
                       ),
                     ],
