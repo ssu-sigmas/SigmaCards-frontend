@@ -19,18 +19,18 @@ class AppColors {
     Colors.blue.shade900,
   ];
 
-  // Gradient colors for quick study button (light mode)
+  // Gradient colors for quick study button (light mode) — бледнее основного UI
   static List<Color> quickStudyGradientLight = [
-    Colors.purple.shade600,
-    Colors.blue.shade600,
-    Colors.pink.shade600,
+    Colors.purple.shade400,
+    Colors.blue.shade400,
+    Colors.pink.shade400,
   ];
 
   // Gradient colors for quick study button (dark mode)
   static List<Color> quickStudyGradientDark = [
-    Colors.purple.shade700,
-    Colors.blue.shade700,
-    Colors.pink.shade700,
+    Colors.purple.shade600,
+    Colors.blue.shade600,
+    Colors.pink.shade600,
   ];
 
   // Gradient colors for AI Import button (light mode)
