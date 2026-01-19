@@ -8,7 +8,7 @@ import '../theme/app_colors.dart';
 
 class StudySessionScreen extends StatefulWidget {
   final Deck deck;
-  final void Function(Deck updatedDeck) onComplete;
+  final void Function(Deck updatedDeck, int cardsReviewed) onComplete;
 
   const StudySessionScreen({
     super.key,
@@ -175,7 +175,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       final updatedDeck = widget.deck.copyWith(
         updatedAt: DateTime.now(),
       );
-      widget.onComplete(updatedDeck);
+      widget.onComplete(updatedDeck, _studyCards.length);
       Navigator.of(context).pop();
     }
   }

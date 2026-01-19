@@ -5,6 +5,8 @@ import '../theme/app_colors.dart';
 import '../widgets/home/header_section.dart';
 import '../widgets/home/quick_study_button.dart';
 import '../widgets/home/quick_actions_section.dart';
+import '../widgets/home/streak_heatmap_section.dart';
+import '../utils/study_activity.dart';
 
 /// Контент вкладки «Главная» (без собственного Scaffold — его даёт [MainShellScreen]).
 class HomeScreen extends StatelessWidget {
@@ -105,6 +107,12 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ),
+                      StreakHeatmapSection(
+                        dailyReviewCounts: userData.dailyReviewCounts,
+                        longestStreak:
+                            StudyActivity.computeLongestStreak(userData.dailyReviewCounts),
+                        isDark: isDark,
                       ),
                       const SizedBox(height: 24),
                     ],

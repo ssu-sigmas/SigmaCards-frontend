@@ -12,7 +12,7 @@ import '../theme/app_colors.dart';
 
 class QuickStudySessionScreen extends StatefulWidget {
   final List<Deck> decks;
-  final void Function(List<Deck> updatedDecks) onComplete;
+  final void Function(List<Deck> updatedDecks, int cardsReviewed) onComplete;
   final VoidCallback onBack;
 
   const QuickStudySessionScreen({
@@ -243,7 +243,7 @@ class _QuickStudySessionScreenState extends State<QuickStudySessionScreen> {
       // Задержка перед возвратом, как в TypeScript версии
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (mounted) {
-          widget.onComplete(_updatedDecks);
+          widget.onComplete(_updatedDecks, _studyCards.length);
           Navigator.of(context).pop();
         }
       });

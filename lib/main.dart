@@ -11,6 +11,7 @@ import 'models/deck.dart';
 import 'models/flashcard.dart';
 import 'services/storage_service.dart';
 import 'services/api_service.dart';
+import 'utils/study_activity.dart';
 import 'widgets/create_deck/flashcards_editor.dart';
 
 void main() {
@@ -34,6 +35,7 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     hasCompletedOnboarding: false,
     decks: [],
     studyStreak: 0,
+    dailyReviewCounts: const {},
     theme: AppTheme.light,
   );
 
@@ -49,7 +51,9 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     
     setState(() {
       if (loaded != null) {
-        _userData = loaded;
+        _userData = loaded.copyWith(
+          studyStreak: StudyActivity.computeCurrentStreak(loaded.dailyReviewCounts),
+        );
       }
     });
 
@@ -334,15 +338,16 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
       MaterialPageRoute(
         builder: (context) => StudySessionScreen(
           deck: deckToStudy,
-          onComplete: (updatedDeck) async {
+          onComplete: (updatedDeck, cardsReviewed) async {
             // Если пользователь авторизован, обновляем колоду на сервере
             if (_userData.isAuthenticated && await ApiService.isAuthenticated()) {
               // TODO: Обновить карточки через API при необходимости
             }
-            
+
             setState(() {
-              _userData = _userData.copyWith(
-                decks: _userData.decks.map((d) => d.id == updatedDeck.id ? updatedDeck : d).toList(),
+              final withActivity = StudyActivity.recordReviews(_userData, cardsReviewed);
+              _userData = withActivity.copyWith(
+                decks: withActivity.decks.map((d) => d.id == updatedDeck.id ? updatedDeck : d).toList(),
               );
             });
             _persist();
@@ -357,9 +362,10 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
       MaterialPageRoute(
         builder: (context) => QuickStudySessionScreen(
           decks: _userData.decks,
-          onComplete: (updatedDecks) {
+          onComplete: (updatedDecks, cardsReviewed) {
             setState(() {
-              _userData = _userData.copyWith(decks: updatedDecks);
+              final withActivity = StudyActivity.recordReviews(_userData, cardsReviewed);
+              _userData = withActivity.copyWith(decks: updatedDecks);
             });
             _persist();
           },

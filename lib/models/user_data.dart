@@ -7,6 +7,8 @@ class UserData {
   final bool hasCompletedOnboarding;
   final List<Deck> decks;
   final int studyStreak;
+  /// Повторённые карточки по дням, ключ `yyyy-MM-dd` (локальная дата).
+  final Map<String, int> dailyReviewCounts;
   final AppTheme theme;
   final String? userId; // UUID текущего пользователя
 
@@ -15,6 +17,7 @@ class UserData {
     required this.hasCompletedOnboarding,
     required this.decks,
     required this.studyStreak,
+    this.dailyReviewCounts = const {},
     required this.theme,
     this.userId,
   });
@@ -33,6 +36,7 @@ class UserData {
     bool? hasCompletedOnboarding,
     List<Deck>? decks,
     int? studyStreak,
+    Map<String, int>? dailyReviewCounts,
     AppTheme? theme,
     String? userId,
   }) {
@@ -41,6 +45,7 @@ class UserData {
       hasCompletedOnboarding: hasCompletedOnboarding ?? this.hasCompletedOnboarding,
       decks: decks ?? this.decks,
       studyStreak: studyStreak ?? this.studyStreak,
+      dailyReviewCounts: dailyReviewCounts ?? this.dailyReviewCounts,
       theme: theme ?? this.theme,
       userId: userId ?? this.userId,
     );
@@ -51,6 +56,7 @@ class UserData {
         'hasCompletedOnboarding': hasCompletedOnboarding,
         'decks': decks.map((deck) => deck.toJson()).toList(),
         'studyStreak': studyStreak,
+        'dailyReviewCounts': dailyReviewCounts,
         'theme': theme.name,
         'userId': userId,
       };
@@ -62,10 +68,16 @@ class UserData {
             .map((deck) => Deck.fromJson(deck))
             .toList(),
         studyStreak: json['studyStreak'] ?? 0,
+        dailyReviewCounts: _parseDailyCounts(json['dailyReviewCounts']),
         theme: AppTheme.values.firstWhere(
           (e) => e.name == json['theme'],
           orElse: () => AppTheme.light,
         ),
         userId: json['userId'] as String?,
       );
+
+  static Map<String, int> _parseDailyCounts(dynamic raw) {
+    if (raw is! Map) return {};
+    return raw.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+  }
 }
