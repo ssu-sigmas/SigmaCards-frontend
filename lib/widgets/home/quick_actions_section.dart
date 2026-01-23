@@ -25,7 +25,7 @@ class QuickActionsSection extends StatelessWidget {
         children: [
           const SizedBox(height: AppStyles.sectionSpacing),
           Text(
-            'Quick Actions',
+            'Быстрые действия',
             style: AppStyles.sectionTitle(isDark),
           ),
           const SizedBox(height: AppStyles.sectionSpacing),
@@ -37,8 +37,14 @@ class QuickActionsSection extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onCreateDeck,
                     icon: const Icon(Icons.add, size: 22),
-                    label: const Text('Create Deck'),
+                    label: const Text('Создать колоду'),
                     style: AppStyles.purpleButtonStyle.copyWith(
+                      textStyle: MaterialStateProperty.all(
+                        const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 15,
+                        ),
+                      ),
                       minimumSize: MaterialStateProperty.all(const Size(0, _rowHeight)),
                       padding: MaterialStateProperty.all(
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -89,11 +95,11 @@ class _GradientImportButton extends StatelessWidget {
                 SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    'Import Text',
+                    'Создать из текста',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
