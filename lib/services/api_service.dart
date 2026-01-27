@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../models/user.dart';
 
 class ApiService {
   static const String baseUrl = 'http://localhost:8010';
   static const String _v1 = '/api/v1';
+  static const _uuid = Uuid();
+
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userIdKey = 'user_id';
@@ -63,6 +66,7 @@ class ApiService {
         Uri.parse('$baseUrl$_v1/auth/register'),
         headers: {
           'Content-Type': 'application/json',
+          'Idempotency-Key': _uuid.v4(),
         },
         body: jsonEncode({
           'username': username,
@@ -539,7 +543,7 @@ class ApiService {
       body['description'] = description;
     }
 
-    return post('/decks', body: body);
+    return post('/decks', body: body, headers: {'Idempotency-Key': _uuid.v4()});
   }
 
   // Обновить колоду
@@ -604,7 +608,7 @@ class ApiService {
       'position': position,
     };
 
-    return post('/cards/decks/$deckId/cards', body: body);
+    return post('/cards/decks/$deckId/cards', body: body, headers: {'Idempotency-Key': _uuid.v4()});
   }
 
   // Создать несколько карточек в колоде
