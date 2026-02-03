@@ -8,6 +8,7 @@ class Flashcard {
   final Map<String, dynamic> content; // JSON с front/back/image/media
   final int position;
   final bool isSuspended;
+  final int version; // Optimistic locking version
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +20,7 @@ class Flashcard {
     required this.content,
     this.position = 0,
     this.isSuspended = false,
+    this.version = 1,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -58,6 +60,7 @@ class Flashcard {
     Map<String, dynamic>? content,
     int? position,
     bool? isSuspended,
+    int? version,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -69,6 +72,7 @@ class Flashcard {
       content: content ?? this.content,
       position: position ?? this.position,
       isSuspended: isSuspended ?? this.isSuspended,
+      version: version ?? this.version,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -82,6 +86,7 @@ class Flashcard {
         'content': content,
         'position': position,
         'is_suspended': isSuspended,
+        'version': version,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -102,6 +107,7 @@ class Flashcard {
         },
         position: json['position'] as int? ?? 0,
         isSuspended: json['is_suspended'] as bool? ?? json['isSuspended'] as bool? ?? false,
+        version: json['version'] as int? ?? 1,
         createdAt: json['created_at'] != null
             ? DateTime.parse(json['created_at'] as String)
             : json['createdAt'] != null
@@ -124,6 +130,7 @@ class Flashcard {
       content: json['content'] as Map<String, dynamic>,
       position: json['position'] as int? ?? 0,
       isSuspended: json['is_suspended'] as bool? ?? false,
+      version: json['version'] as int? ?? 1,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );

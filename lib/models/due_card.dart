@@ -6,6 +6,7 @@ class DueCard {
   final int state; // 0-3 (FSRS state)
   final double stability; // FSRS stability
   final double difficulty; // FSRS difficulty
+  final int version; // Optimistic locking version
 
   DueCard({
     required this.userCardId,
@@ -14,6 +15,7 @@ class DueCard {
     required this.state,
     required this.stability,
     required this.difficulty,
+    this.version = 1,
   });
 
   // Геттеры для удобного доступа к front и back
@@ -28,6 +30,7 @@ class DueCard {
       state: json['state'] as int,
       stability: (json['stability'] as num).toDouble(),
       difficulty: (json['difficulty'] as num).toDouble(),
+      version: json['version'] as int? ?? 1,
     );
   }
 
@@ -38,6 +41,7 @@ class DueCard {
         'state': state,
         'stability': stability,
         'difficulty': difficulty,
+        'version': version,
       };
 }
 

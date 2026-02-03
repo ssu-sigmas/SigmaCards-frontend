@@ -10,7 +10,8 @@ class Deck {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int flashcardsCount; // Количество карточек (из API)
-  
+  final int version; // Optimistic locking version
+
   // Локальное поле для хранения карточек (не приходит из API)
   final List<Flashcard>? cards;
 
@@ -23,6 +24,7 @@ class Deck {
     required this.createdAt,
     required this.updatedAt,
     this.flashcardsCount = 0,
+    this.version = 1,
     this.cards,
   });
 
@@ -46,6 +48,7 @@ class Deck {
     DateTime? createdAt,
     DateTime? updatedAt,
     int? flashcardsCount,
+    int? version,
     List<Flashcard>? cards,
   }) {
     return Deck(
@@ -57,6 +60,7 @@ class Deck {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       flashcardsCount: flashcardsCount ?? this.flashcardsCount,
+      version: version ?? this.version,
       cards: cards ?? this.cards,
     );
   }
@@ -70,6 +74,7 @@ class Deck {
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
         'flashcards_count': flashcardsCount,
+        'version': version,
         // Для обратной совместимости сохраняем старые поля
         'name': title,
         'color': 'bg-purple-500', // Дефолтный цвет для совместимости
@@ -101,8 +106,9 @@ class Deck {
             : json['updatedAt'] != null
                 ? DateTime.parse(json['updatedAt'] as String)
                 : DateTime.now(),
-        flashcardsCount: json['flashcards_count'] as int? ?? 
+        flashcardsCount: json['flashcards_count'] as int? ??
             (json['cards'] as List?)?.length ?? 0,
+        version: json['version'] as int? ?? 1,
         cards: json['cards'] != null
             ? (json['cards'] as List)
                 .map((card) => Flashcard.fromJson(card as Map<String, dynamic>))
@@ -121,7 +127,8 @@ class Deck {
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       flashcardsCount: json['flashcards_count'] as int? ?? 0,
-      cards: null, // Карточки загружаются отдельно
+      version: json['version'] as int? ?? 1,
+      cards: null,
     );
   }
 }
