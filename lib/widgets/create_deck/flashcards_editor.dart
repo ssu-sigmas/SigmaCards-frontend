@@ -81,7 +81,7 @@ class FlashcardsEditor extends StatelessWidget {
   }
 }
 
-class _FlashcardItem extends StatelessWidget {
+class _FlashcardItem extends StatefulWidget {
   final int index;
   final FlashcardDraft data;
   final bool isDark;
@@ -98,7 +98,42 @@ class _FlashcardItem extends StatelessWidget {
     required this.onImageChange,
   });
 
-  Future<void> _pickImage(BuildContext context) async {
+  @override
+  State<_FlashcardItem> createState() => _FlashcardItemState();
+}
+
+class _FlashcardItemState extends State<_FlashcardItem> {
+  late TextEditingController _frontController;
+  late TextEditingController _backController;
+
+  @override
+  void initState() {
+    super.initState();
+    _frontController = TextEditingController(text: widget.data.front);
+    _backController = TextEditingController(text: widget.data.back);
+  }
+
+  @override
+  void didUpdateWidget(_FlashcardItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data.front != widget.data.front &&
+        _frontController.text != widget.data.front) {
+      _frontController.text = widget.data.front;
+    }
+    if (oldWidget.data.back != widget.data.back &&
+        _backController.text != widget.data.back) {
+      _backController.text = widget.data.back;
+    }
+  }
+
+  @override
+  void dispose() {
+    _frontController.dispose();
+    _backController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       withData: true,
@@ -111,6 +146,7 @@ class _FlashcardItem extends StatelessWidget {
 
     const maxSize = 2 * 1024 * 1024;
     if (bytes.length > maxSize) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Изображение слишком большое (максимум 2MB)')),
       );
@@ -121,7 +157,7 @@ class _FlashcardItem extends StatelessWidget {
     final mimeExt = ext == 'jpg' ? 'jpeg' : ext;
     final encoded = base64Encode(bytes);
     final dataUrl = 'data:image/$mimeExt;base64,$encoded';
-    onImageChange(index, dataUrl);
+    widget.onImageChange(widget.index, dataUrl);
   }
 
   Uint8List? _decodeImageBytes(String? dataUrl) {
@@ -138,7 +174,7 @@ class _FlashcardItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: isDark ? AppColors.darkCard : AppColors.lightCard,
+      color: widget.isDark ? AppColors.darkCard : AppColors.lightCard,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppStyles.borderRadius),
       ),
@@ -151,14 +187,14 @@ class _FlashcardItem extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Card ${index + 1}',
+                  'Card ${widget.index + 1}',
                   style: TextStyle(
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    color: widget.isDark ? Colors.grey[400] : Colors.grey[600],
                   ),
                 ),
-                if (onRemove != null)
+                if (widget.onRemove != null)
                   IconButton(
-                    onPressed: onRemove,
+                    onPressed: widget.onRemove,
                     icon: const Icon(Icons.delete_outline),
                     color: Colors.red,
                   ),
@@ -166,17 +202,15 @@ class _FlashcardItem extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _buildField(
-              context,
               label: 'Front',
-              initialValue: data.front,
-              onChanged: (v) => onChange(index, 'front', v),
+              controller: _frontController,
+              onChanged: (v) => widget.onChange(widget.index, 'front', v),
             ),
             const SizedBox(height: 12),
             _buildField(
-              context,
               label: 'Back',
-              initialValue: data.back,
-              onChanged: (v) => onChange(index, 'back', v),
+              controller: _backController,
+              onChanged: (v) => widget.onChange(widget.index, 'back', v),
               minLines: 2,
             ),
             const SizedBox(height: 12),
@@ -187,30 +221,32 @@ class _FlashcardItem extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () => _pickImage(context),
+                    onPressed: _pickImage,
                     icon: const Icon(Icons.image_outlined),
-                    label: Text(data.imageDataUrl == null ? 'Добавить картинку' : 'Изменить картинку'),
+                    label: Text(widget.data.imageDataUrl == null
+                        ? 'Добавить картинку'
+                        : 'Изменить картинку'),
                   ),
-                  if (data.imageDataUrl != null)
+                  if (widget.data.imageDataUrl != null)
                     TextButton.icon(
-                      onPressed: () => onImageChange(index, null),
+                      onPressed: () => widget.onImageChange(widget.index, null),
                       icon: const Icon(Icons.delete_outline, color: Colors.red),
                       label: const Text('Удалить', style: TextStyle(color: Colors.red)),
                     ),
                 ],
               ),
             ),
-            if (data.imageDataUrl != null) ...[
+            if (widget.data.imageDataUrl != null) ...[
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   constraints: const BoxConstraints(maxHeight: 180),
                   width: double.infinity,
-                  color: isDark ? Colors.grey[900] : Colors.grey[100],
-                  child: _decodeImageBytes(data.imageDataUrl) != null
+                  color: widget.isDark ? Colors.grey[900] : Colors.grey[100],
+                  child: _decodeImageBytes(widget.data.imageDataUrl) != null
                       ? Image.memory(
-                          _decodeImageBytes(data.imageDataUrl)!,
+                          _decodeImageBytes(widget.data.imageDataUrl)!,
                           fit: BoxFit.cover,
                         )
                       : const SizedBox(
@@ -226,10 +262,9 @@ class _FlashcardItem extends StatelessWidget {
     );
   }
 
-  Widget _buildField(
-    BuildContext context, {
+  Widget _buildField({
     required String label,
-    required String initialValue,
+    required TextEditingController controller,
     required ValueChanged<String> onChanged,
     int minLines = 2,
   }) {
@@ -241,32 +276,32 @@ class _FlashcardItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: isDark ? Colors.grey[300] : Colors.grey[700],
+            color: widget.isDark ? Colors.grey[300] : Colors.grey[700],
           ),
         ),
         const SizedBox(height: 8),
         TextField(
-          controller: TextEditingController(text: initialValue),
+          controller: controller,
           onChanged: onChanged,
           minLines: minLines,
           maxLines: 6,
           decoration: InputDecoration(
             hintText: label == 'Front' ? 'Question or term' : 'Answer or definition',
             hintStyle: TextStyle(
-              color: isDark ? Colors.grey[600] : Colors.grey[400],
+              color: widget.isDark ? Colors.grey[600] : Colors.grey[400],
             ),
             filled: true,
-            fillColor: isDark ? Colors.grey[900] : Colors.grey[50],
+            fillColor: widget.isDark ? Colors.grey[900] : Colors.grey[50],
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                color: widget.isDark ? Colors.grey[700]! : Colors.grey[300]!,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                color: widget.isDark ? Colors.grey[700]! : Colors.grey[300]!,
               ),
             ),
             focusedBorder: OutlineInputBorder(
@@ -282,7 +317,7 @@ class _FlashcardItem extends StatelessWidget {
             ),
           ),
           style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
+            color: widget.isDark ? Colors.white : Colors.black87,
             fontSize: 16,
           ),
         ),
