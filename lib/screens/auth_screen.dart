@@ -113,9 +113,13 @@ class _AuthScreenState extends State<AuthScreen> {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 transitionBuilder: (Widget child, Animation<double> animation) {
+                  final isLoginWidget = child.key == const ValueKey('login');
+                  final isIncoming = isLoginWidget == _isLogin;
                   return SlideTransition(
                     position: Tween<Offset>(
-                      begin: Offset(_isLogin ? -1.0 : 1.0, 0.0),
+                      begin: isIncoming
+                          ? Offset(_isLogin ? -1.0 : 1.0, 0.0)
+                          : Offset(_isLogin ? 1.0 : -1.0, 0.0),
                       end: Offset.zero,
                     ).animate(CurvedAnimation(
                       parent: animation,
