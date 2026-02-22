@@ -7,7 +7,6 @@ import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
 import '../widgets/create_deck/deck_info_form.dart';
-import '../widgets/create_deck/color_picker.dart';
 import '../widgets/create_deck/flashcards_editor.dart';
 
 class CreateDeckScreen extends StatefulWidget {
@@ -31,7 +30,6 @@ class CreateDeckScreen extends StatefulWidget {
 class _CreateDeckScreenState extends State<CreateDeckScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  String _selectedColorToken = 'bg-purple-500';
   late final List<FlashcardDraft> _cards;
 
   @override
@@ -262,16 +260,6 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
                     DeckInfoForm(
                       nameController: _nameController,
                       descriptionController: _descriptionController,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 16),
-                    ColorPicker(
-                      selectedToken: _selectedColorToken,
-                      onChanged: (token) {
-                        setState(() {
-                          _selectedColorToken = token;
-                        });
-                      },
                       isDark: isDark,
                     ),
                     const SizedBox(height: 16),
