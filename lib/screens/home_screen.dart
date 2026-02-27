@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_data.dart';
 import '../models/deck.dart';
+import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/home/header_section.dart';
 import '../widgets/home/quick_study_button.dart';
@@ -9,7 +10,7 @@ import '../widgets/home/streak_heatmap_section.dart';
 import '../utils/study_activity.dart';
 
 /// Контент вкладки «Главная» (без собственного Scaffold — его даёт [MainShellScreen]).
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final UserData userData;
   final VoidCallback onCreateDeck;
   final Function(Deck) onEditDeck;
@@ -32,6 +33,37 @@ class HomeScreen extends StatelessWidget {
   });
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _dueCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDueCount();
+  }
+
+  @override
+  void didUpdateWidget(HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userData.decks != widget.userData.decks) {
+      _loadDueCount();
+    }
+  }
+
+  Future<void> _loadDueCount() async {
+    if (!await ApiService.isAuthenticated()) return;
+    final result = await ApiService.getDueCards(limit: 100);
+    if (!mounted) return;
+    if (result['success'] == true) {
+      final cards = result['cards'] as List;
+      setState(() => _dueCount = cards.length);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scheme = Theme.of(context).colorScheme;
@@ -50,19 +82,20 @@ class HomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       HeaderSection(
-                        userData: userData,
+                        userData: widget.userData,
                         isDark: isDark,
                       ),
                       const SizedBox(height: 24),
                       QuickStudyButton(
-                        userData: userData,
+                        userData: widget.userData,
                         isDark: isDark,
-                        onQuickStudy: onQuickStudy,
+                        onQuickStudy: widget.onQuickStudy,
+                        dueCardsCount: _dueCount,
                       ),
                       QuickActionsSection(
                         isDark: isDark,
-                        onCreateDeck: onCreateDeck,
-                        onAIImport: onAIImport,
+                        onCreateDeck: widget.onCreateDeck,
+                        onAIImport: widget.onAIImport,
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
@@ -72,7 +105,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           borderRadius: BorderRadius.circular(12),
                           child: InkWell(
-                            onTap: onOpenDecksTab,
+                            onTap: widget.onOpenDecksTab,
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -91,9 +124,9 @@ class HomeScreen extends StatelessWidget {
                                               ),
                                         ),
                                         Text(
-                                          userData.decks.isEmpty
+                                          widget.userData.decks.isEmpty
                                               ? 'Пока пусто — создайте первую'
-                                              : '${userData.decks.length} ${_decksWord(userData.decks.length)}',
+                                              : '${widget.userData.decks.length} ${_decksWord(widget.userData.decks.length)}',
                                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                 color: scheme.onSurfaceVariant,
                                               ),
@@ -109,9 +142,9 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       StreakHeatmapSection(
-                        dailyReviewCounts: userData.dailyReviewCounts,
+                        dailyReviewCounts: widget.userData.dailyReviewCounts,
                         longestStreak:
-                            StudyActivity.computeLongestStreak(userData.dailyReviewCounts),
+                            StudyActivity.computeLongestStreak(widget.userData.dailyReviewCounts),
                         isDark: isDark,
                       ),
                       const SizedBox(height: 24),

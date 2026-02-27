@@ -8,12 +8,14 @@ class QuickStudyButton extends StatelessWidget {
   final UserData userData;
   final bool isDark;
   final VoidCallback onQuickStudy;
+  final int? dueCardsCount;
 
   const QuickStudyButton({
     super.key,
     required this.userData,
     required this.isDark,
     required this.onQuickStudy,
+    this.dueCardsCount,
   });
 
   @override
@@ -93,7 +95,7 @@ class QuickStudyButton extends StatelessWidget {
                       Text(
                         !hasCards
                             ? 'Добавьте карточки в колоду'
-                            : ruCardCountLabel(userData.dueCardsCount),
+                            : ruCardCountLabel(dueCardsCount ?? 0),
                         style: AppStyles.quickStudySubtitle,
                       ),
                     ],
