@@ -26,7 +26,13 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   bool _isFlipped = false;
   int _completed = 0;
   bool _isLoading = true;
-  DateTime? _cardStartTime; // Для отслеживания времени ответа
+  DateTime? _cardStartTime;
+  final Map<_Difficulty, int> _ratingCounts = {
+    _Difficulty.again: 0,
+    _Difficulty.hard: 0,
+    _Difficulty.good: 0,
+    _Difficulty.easy: 0,
+  };
 
   @override
   void initState() {
@@ -102,8 +108,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   void _flip() {
     setState(() {
       _isFlipped = !_isFlipped;
-      if (!_isFlipped && _cardStartTime == null) {
-        // Начинаем отслеживать время, когда карточка перевернута
+      if (_isFlipped) {
         _cardStartTime = DateTime.now();
       }
     });
@@ -126,6 +131,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
         final result = await ApiService.submitReview(
           userCardId: dueCard.userCardId,
           rating: rating,
+          version: dueCard.version,
           durationMs: durationMs,
         );
 
@@ -158,7 +164,8 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       }
     }
 
-    // Обновляем локальное состояние
+    _ratingCounts[d] = (_ratingCounts[d] ?? 0) + 1;
+
     if (_currentIndex < _studyCards.length - 1) {
       setState(() {
         _currentIndex += 1;
@@ -167,17 +174,75 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
         _cardStartTime = null;
       });
     } else {
-      setState(() {
-        _completed += 1;
-      });
-      
-      // Обновляем колоду (для совместимости с локальным режимом)
-      final updatedDeck = widget.deck.copyWith(
-        updatedAt: DateTime.now(),
-      );
+      setState(() => _completed += 1);
+      final updatedDeck = widget.deck.copyWith(updatedAt: DateTime.now());
       widget.onComplete(updatedDeck, _studyCards.length);
-      Navigator.of(context).pop();
+      if (mounted) _showCompletionSheet();
     }
+  }
+
+  void _showCompletionSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: isDark ? AppColors.darkCard : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 56),
+            const SizedBox(height: 12),
+            Text(
+              'Сессия завершена!',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Повторено карточек: ${_studyCards.length}',
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? Colors.white60 : Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _RatingChip(label: 'Again', count: _ratingCounts[_Difficulty.again] ?? 0, color: const Color(0xFFEF9A9A)),
+                _RatingChip(label: 'Hard', count: _ratingCounts[_Difficulty.hard] ?? 0, color: const Color(0xFFFFCC80)),
+                _RatingChip(label: 'Good', count: _ratingCounts[_Difficulty.good] ?? 0, color: Colors.blue),
+                _RatingChip(label: 'Easy', count: _ratingCounts[_Difficulty.easy] ?? 0, color: Colors.green),
+              ],
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Готово', style: TextStyle(fontSize: 16)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   int _difficultyToRating(_Difficulty d) {
@@ -208,7 +273,34 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     if (_studyCards.isEmpty || _current == null) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.deck.title)),
-        body: const Center(child: Text('No cards to study')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_outline_rounded, size: 64, color: Colors.green),
+                const SizedBox(height: 16),
+                const Text(
+                  'Отлично! Все карточки повторены.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Следующий повтор — завтра.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Назад'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -370,6 +462,32 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
 }
 
 enum _Difficulty { again, hard, good, easy }
+
+class _RatingChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+
+  const _RatingChip({required this.label, required this.count, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 22,
+          backgroundColor: color.withOpacity(0.15),
+          child: Text(
+            '$count',
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+      ],
+    );
+  }
+}
 
 ImageProvider? _imageFromDataUrl(String? dataUrl) {
   if (dataUrl == null || dataUrl.isEmpty) return null;
