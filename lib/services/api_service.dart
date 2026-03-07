@@ -762,5 +762,73 @@ class ApiService {
   static Future<Map<String, dynamic>> getReviewHistory(String cardId) async {
     return get('/review/history/$cardId');
   }
+
+  // ==========================================
+  // IMAGES API
+  // ==========================================
+
+  // Получить presigned URL для загрузки изображения
+  // contentType: MIME-тип, например 'image/jpeg', 'image/png', 'image/webp'
+  static Future<Map<String, dynamic>> getImageUploadUrl({
+    required String contentType,
+  }) async {
+    final result = await post('/images/', body: {'content_type': contentType});
+
+    if (result['success'] == true) {
+      final data = result['data'] as Map<String, dynamic>;
+      return {
+        'success': true,
+        'image_id': data['image_id'] as String,
+        'upload_url': data['upload_url'] as String,
+        'method': data['method'] as String,
+        'upload_fields': (data['upload_fields'] as Map<String, dynamic>?) ?? {},
+        'required_headers': (data['required_headers'] as Map<String, dynamic>?) ?? {},
+        'expires_in': data['expires_in'] as int,
+        'object_name': data['object_name'] as String,
+      };
+    }
+    return result;
+  }
+
+  // Загрузить файл по presigned URL (PUT или POST)
+  static Future<bool> uploadFileToPresignedUrl({
+    required String uploadUrl,
+    required String method,
+    required List<int> fileBytes,
+    required String contentType,
+    Map<String, dynamic> uploadFields = const {},
+    Map<String, dynamic> requiredHeaders = const {},
+  }) async {
+    try {
+      final headers = <String, String>{
+        'Content-Type': contentType,
+        for (final e in requiredHeaders.entries)
+          e.key: e.value.toString(),
+      };
+
+      http.Response response;
+      if (method.toUpperCase() == 'PUT') {
+        response = await http.put(
+          Uri.parse(uploadUrl),
+          headers: headers,
+          body: fileBytes,
+        );
+      } else {
+        final request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
+        uploadFields.forEach((k, v) => request.fields[k] = v.toString());
+        request.files.add(http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: 'upload',
+        ));
+        final streamed = await request.send();
+        response = await http.Response.fromStream(streamed);
+      }
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
