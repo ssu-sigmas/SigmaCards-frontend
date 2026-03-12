@@ -1,3 +1,22 @@
+String _textFromBlocks(dynamic blocks) {
+  if (blocks is String) return blocks;
+  if (blocks is List) {
+    for (final b in blocks) {
+      if (b is Map && b['type'] == 'text') return b['content'] as String? ?? '';
+    }
+  }
+  return '';
+}
+
+String? _imageUrlFromBlocks(dynamic blocks) {
+  if (blocks is List) {
+    for (final b in blocks) {
+      if (b is Map && b['type'] == 'image') return b['image_url'] as String?;
+    }
+  }
+  return null;
+}
+
 // Модель для карточки на повтор (due card) из API
 class DueCard {
   final String userCardId; // UUID UserCard
@@ -18,15 +37,26 @@ class DueCard {
     this.version = 1,
   });
 
-  // Геттеры для удобного доступа к front и back
-  String get front => content['front'] as String? ?? '';
-  String get back => content['back'] as String? ?? '';
+  String get front => _textFromBlocks(content['front']);
+  String get back => _textFromBlocks(content['back']);
+  String? get imageUrl => _imageUrlFromBlocks(content['back']) ?? content['image_url'] as String?;
 
   factory DueCard.fromJson(Map<String, dynamic> json) {
+    final rawContent = json['content'] as Map<String, dynamic>;
+    final front = rawContent['front'];
+    final normalizedContent = (front is List)
+        ? {
+            'front': _textFromBlocks(front),
+            'back': _textFromBlocks(rawContent['back']),
+            if (_imageUrlFromBlocks(rawContent['back']) != null)
+              'image_url': _imageUrlFromBlocks(rawContent['back']),
+          }
+        : rawContent;
+
     return DueCard(
       userCardId: json['user_card_id'] as String,
       cardId: json['card_id'] as String,
-      content: json['content'] as Map<String, dynamic>,
+      content: normalizedContent,
       state: json['state'] as int,
       stability: (json['stability'] as num).toDouble(),
       difficulty: (json['difficulty'] as num).toDouble(),

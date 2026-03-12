@@ -1,5 +1,24 @@
 import 'enums.dart';
 
+String _textFromBlocks(dynamic blocks) {
+  if (blocks is String) return blocks;
+  if (blocks is List) {
+    for (final b in blocks) {
+      if (b is Map && b['type'] == 'text') return b['content'] as String? ?? '';
+    }
+  }
+  return '';
+}
+
+String? _imageUrlFromBlocks(dynamic blocks) {
+  if (blocks is List) {
+    for (final b in blocks) {
+      if (b is Map && b['type'] == 'image') return b['image_url'] as String?;
+    }
+  }
+  return null;
+}
+
 class Flashcard {
   final String id; // UUID как строка
   final String deckId; // UUID колоды
@@ -25,9 +44,9 @@ class Flashcard {
     required this.updatedAt,
   });
 
-  // Геттеры для удобного доступа к front и back
-  String get front => content['front'] as String? ?? '';
-  String get back => content['back'] as String? ?? '';
+  String get front => _textFromBlocks(content['front']);
+  String get back => _textFromBlocks(content['back']);
+  String? get imageUrl => _imageUrlFromBlocks(content['back']) ?? content['image_url'] as String?;
 
   // Сеттеры для обновления front и back
   Flashcard copyWithContent({
@@ -121,13 +140,24 @@ class Flashcard {
       );
     }
 
-    // Новый формат
+    // Новый формат из API (content содержит front/back как массивы блоков)
+    final rawContent = json['content'] as Map<String, dynamic>;
+    final front = rawContent['front'];
+    final normalizedContent = (front is List)
+        ? {
+            'front': _textFromBlocks(front),
+            'back': _textFromBlocks(rawContent['back']),
+            if (_imageUrlFromBlocks(rawContent['back']) != null)
+              'image_url': _imageUrlFromBlocks(rawContent['back']),
+          }
+        : rawContent;
+
     return Flashcard(
       id: json['id'] as String,
       deckId: json['deck_id'] as String,
       sourceId: json['source_id'] as String?,
       cardType: CardType.fromString(json['card_type'] as String),
-      content: json['content'] as Map<String, dynamic>,
+      content: normalizedContent,
       position: json['position'] as int? ?? 0,
       isSuspended: json['is_suspended'] as bool? ?? false,
       version: json['version'] as int? ?? 1,

@@ -11,6 +11,7 @@ import 'models/deck.dart';
 import 'models/flashcard.dart';
 import 'services/storage_service.dart';
 import 'services/api_service.dart';
+import 'services/unsplash_service.dart';
 import 'utils/study_activity.dart';
 import 'widgets/create_deck/flashcards_editor.dart';
 
@@ -222,11 +223,48 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
         
         // Если есть карточки, создаем их через API
         if (deck.cards != null && deck.cards!.isNotEmpty) {
-          final cardsToCreate = deck.cards!.map((card) => {
-            'content': card.content,
-            'card_type': card.cardType.value,
-            'position': card.position,
-          }).toList();
+          final cardsToCreate = <Map<String, dynamic>>[];
+          for (final card in deck.cards!) {
+            final content = Map<String, dynamic>.from(card.content);
+            // Auto-fetch stock photo if card has no image
+            if (content['image_id'] == null && content['image_url'] == null) {
+              try {
+                final query = (content['front'] as String? ?? '').split(' ').take(3).join(' ');
+                if (query.isNotEmpty) {
+                  final photoUrl = await UnsplashService.fetchPhotoUrl(query);
+                  if (photoUrl != null) {
+                    final bytes = await UnsplashService.downloadImageBytes(photoUrl);
+                    if (bytes != null) {
+                      final uploadResult = await ApiService.getImageUploadUrl(contentType: 'image/jpeg');
+                      if (uploadResult['success'] == true) {
+                        final putUrl = uploadResult['upload_url'] as String?;
+                        final imageId = uploadResult['image_id'] as String?;
+                        final method = uploadResult['method'] as String? ?? 'PUT';
+                        final uploadFields = (uploadResult['upload_fields'] as Map<String, dynamic>?) ?? {};
+                        final requiredHeaders = (uploadResult['required_headers'] as Map<String, dynamic>?) ?? {};
+                        if (putUrl != null && imageId != null) {
+                          await ApiService.uploadFileToPresignedUrl(
+                            uploadUrl: putUrl,
+                            method: method,
+                            fileBytes: bytes,
+                            contentType: 'image/jpeg',
+                            uploadFields: uploadFields,
+                            requiredHeaders: requiredHeaders,
+                          );
+                          content['image_id'] = imageId;
+                        }
+                      }
+                    }
+                  }
+                }
+              } catch (_) {}
+            }
+            cardsToCreate.add({
+              'content': content,
+              'card_type': card.cardType.value,
+              'position': card.position,
+            });
+          }
 
           final cardsResult = await ApiService.createCards(
             deckId: createdDeck.id,

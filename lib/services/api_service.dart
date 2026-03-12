@@ -596,6 +596,27 @@ class ApiService {
     return get('/cards/$cardId');
   }
 
+  // Конвертировать простой формат content в CardContentWrite (block-формат)
+  static Map<String, dynamic> _toBlockContent(Map<String, dynamic> content) {
+    final front = content['front'];
+    if (front is List) return content; // уже в block-формате
+
+    final frontText = front as String? ?? '';
+    final backText = content['back'] as String? ?? '';
+    final imageId = content['image_id'] as String?;
+
+    return {
+      'front': [
+        {'id': _uuid.v4(), 'type': 'text', 'content': frontText},
+      ],
+      'back': [
+        {'id': _uuid.v4(), 'type': 'text', 'content': backText},
+        if (imageId != null)
+          {'id': _uuid.v4(), 'type': 'image', 'image_id': imageId},
+      ],
+    };
+  }
+
   // Создать карточку в колоде
   static Future<Map<String, dynamic>> createCard({
     required String deckId,
@@ -604,8 +625,7 @@ class ApiService {
     int position = 0,
   }) async {
     final body = <String, dynamic>{
-      'content': content,
-      'card_type': cardType,
+      'content': _toBlockContent(content),
       'position': position,
     };
 
