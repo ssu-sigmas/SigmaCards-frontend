@@ -41,13 +41,23 @@ class DeckCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: canStudy ? onStudy : null,
+        onLongPress: onDelete,
         borderRadius: BorderRadius.circular(16),
         child: Ink(
           decoration: BoxDecoration(
             color: isDark ? AppColors.darkCard : AppColors.lightCard,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: scheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.55),
+            border: Border(
+              left: BorderSide(color: accent, width: 3),
+              top: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.55),
+              ),
+              right: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.55),
+              ),
+              bottom: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.55),
+              ),
             ),
             boxShadow: isDark
                 ? null
@@ -107,11 +117,10 @@ class DeckCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          _DeckSecondaryActions(
+                          _EditButton(
                             scheme: scheme,
                             isDark: isDark,
                             onEdit: onEdit,
-                            onDelete: onDelete,
                           ),
                         ],
                       ),
@@ -181,18 +190,15 @@ class DeckCard extends StatelessWidget {
   }
 }
 
-/// Компактная группа «ред. / уд.» в одной капсуле справа от заголовка.
-class _DeckSecondaryActions extends StatelessWidget {
+class _EditButton extends StatelessWidget {
   final ColorScheme scheme;
   final bool isDark;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
-  const _DeckSecondaryActions({
+  const _EditButton({
     required this.scheme,
     required this.isDark,
     required this.onEdit,
-    required this.onDelete,
   });
 
   @override
@@ -209,52 +215,16 @@ class _DeckSecondaryActions extends StatelessWidget {
           border: Border.all(color: border, width: 1),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _miniIconBtn(
-              context: context,
-              icon: Icons.edit_outlined,
-              tooltip: 'Изменить',
-              color: scheme.onSurfaceVariant,
-              onPressed: onEdit,
+        child: Tooltip(
+          message: 'Изменить',
+          child: InkWell(
+            onTap: onEdit,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Icon(Icons.edit_outlined, size: 20, color: scheme.onSurfaceVariant),
             ),
-            SizedBox(
-              height: 22,
-              child: VerticalDivider(
-                width: 1,
-                thickness: 1,
-                color: scheme.outlineVariant.withValues(alpha: 0.6),
-              ),
-            ),
-            _miniIconBtn(
-              context: context,
-              icon: Icons.delete_outline_rounded,
-              tooltip: 'Удалить',
-              color: scheme.error,
-              onPressed: onDelete,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _miniIconBtn({
-    required BuildContext context,
-    required IconData icon,
-    required String tooltip,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Icon(icon, size: 20, color: color),
+          ),
         ),
       ),
     );
