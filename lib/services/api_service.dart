@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/user.dart';
@@ -8,6 +10,11 @@ class ApiService {
   static const String baseUrl = 'http://localhost:8010';
   static const String _v1 = '/api/v1';
   static const _uuid = Uuid();
+
+  // Persistent client — dart:io HttpClient negotiates HTTP/2 via ALPN on TLS
+  static final http.Client _client = IOClient(
+    HttpClient()..connectionTimeout = const Duration(seconds: 15),
+  );
 
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
@@ -62,7 +69,7 @@ class ApiService {
     required String password,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse('$baseUrl$_v1/auth/register'),
         headers: {
           'Content-Type': 'application/json',
@@ -126,7 +133,7 @@ class ApiService {
     required String password,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse('$baseUrl$_v1/auth/login'),
         headers: {
           'Content-Type': 'application/json',
@@ -203,7 +210,7 @@ class ApiService {
         };
       }
 
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse('$baseUrl$_v1/auth/refresh?refresh_token=${Uri.encodeComponent(refreshTokenValue)}'),
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +267,7 @@ class ApiService {
       
       if (skipRefresh) {
         final headers = await getAuthHeaders();
-        response = await http.get(
+        response = await _client.get(
           Uri.parse('$baseUrl$_v1/users/me'),
           headers: headers,
         );
@@ -350,27 +357,27 @@ class ApiService {
     http.Response response;
     switch (method.toUpperCase()) {
       case 'GET':
-        response = await http.get(
+        response = await _client.get(
           Uri.parse('$baseUrl$_v1$endpoint'),
           headers: headers,
         );
         break;
       case 'POST':
-        response = await http.post(
+        response = await _client.post(
           Uri.parse('$baseUrl$_v1$endpoint'),
           headers: headers,
           body: body != null ? jsonEncode(body) : null,
         );
         break;
       case 'PUT':
-        response = await http.put(
+        response = await _client.put(
           Uri.parse('$baseUrl$_v1$endpoint'),
           headers: headers,
           body: body != null ? jsonEncode(body) : null,
         );
         break;
       case 'DELETE':
-        response = await http.delete(
+        response = await _client.delete(
           Uri.parse('$baseUrl$_v1$endpoint'),
           headers: headers,
         );
@@ -385,7 +392,7 @@ class ApiService {
     // Если получили 401, пробуем refresh token
     if (response.statusCode == 401) {
       final refreshResult = await refreshToken();
-      
+
       if (refreshResult['success'] == true) {
         // Повторяем запрос с новым токеном
         headers = await getAuthHeaders();
@@ -395,27 +402,27 @@ class ApiService {
 
         switch (method.toUpperCase()) {
           case 'GET':
-            response = await http.get(
+            response = await _client.get(
               Uri.parse('$baseUrl$_v1$endpoint'),
               headers: headers,
             );
             break;
           case 'POST':
-            response = await http.post(
+            response = await _client.post(
               Uri.parse('$baseUrl$_v1$endpoint'),
               headers: headers,
               body: body != null ? jsonEncode(body) : null,
             );
             break;
           case 'PUT':
-            response = await http.put(
+            response = await _client.put(
               Uri.parse('$baseUrl$_v1$endpoint'),
               headers: headers,
               body: body != null ? jsonEncode(body) : null,
             );
             break;
           case 'DELETE':
-            response = await http.delete(
+            response = await _client.delete(
               Uri.parse('$baseUrl$_v1$endpoint'),
               headers: headers,
             );
@@ -828,7 +835,7 @@ class ApiService {
 
       http.Response response;
       if (method.toUpperCase() == 'PUT') {
-        response = await http.put(
+        response = await _client.put(
           Uri.parse(uploadUrl),
           headers: headers,
           body: fileBytes,
@@ -841,7 +848,7 @@ class ApiService {
           fileBytes,
           filename: 'upload',
         ));
-        final streamed = await request.send();
+        final streamed = await _client.send(request);
         response = await http.Response.fromStream(streamed);
       }
 
