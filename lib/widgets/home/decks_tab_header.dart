@@ -46,6 +46,10 @@ class DecksTabHeader extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(AppStyles.headerBorderRadius),
+          bottomRight: Radius.circular(AppStyles.headerBorderRadius),
+        ),
       ),
       child: SafeArea(
         bottom: false,

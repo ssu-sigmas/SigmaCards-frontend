@@ -97,56 +97,71 @@ class _HomeScreenState extends State<HomeScreen> {
                         onCreateDeck: widget.onCreateDeck,
                         onAIImport: widget.onAIImport,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-                        child: Material(
-                          color: scheme.surfaceContainerHighest.withValues(
-                            alpha: isDark ? 0.35 : 0.65,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            onTap: widget.onOpenDecksTab,
+                      if (widget.userData.decks.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                          child: Material(
+                            color: scheme.surfaceContainerHighest.withValues(
+                              alpha: isDark ? 0.35 : 0.65,
+                            ),
                             borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.library_books_rounded, color: scheme.primary),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Мои колоды',
-                                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                        Text(
-                                          widget.userData.decks.isEmpty
-                                              ? 'Пока пусто — создайте первую'
-                                              : '${widget.userData.decks.length} ${_decksWord(widget.userData.decks.length)}',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                color: scheme.onSurfaceVariant,
-                                              ),
-                                        ),
-                                      ],
+                            child: InkWell(
+                              onTap: widget.onOpenDecksTab,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.library_books_rounded, color: scheme.primary),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Мои колоды',
+                                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          Text(
+                                            '${widget.userData.decks.length} ${_decksWord(widget.userData.decks.length)}',
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: scheme.onSurfaceVariant,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  Icon(Icons.chevron_right_rounded, color: scheme.outline),
-                                ],
+                                    Icon(Icons.chevron_right_rounded, color: scheme.outline),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      StreakHeatmapSection(
-                        dailyReviewCounts: widget.userData.dailyReviewCounts,
-                        longestStreak:
-                            StudyActivity.computeLongestStreak(widget.userData.dailyReviewCounts),
-                        isDark: isDark,
-                      ),
+                      if (widget.userData.decks.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                          child: FilledButton.icon(
+                            onPressed: widget.onCreateDeck,
+                            icon: const Icon(Icons.add_rounded, size: 20),
+                            label: const Text('Создать первую колоду'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (widget.userData.dailyReviewCounts.isNotEmpty)
+                        StreakHeatmapSection(
+                          dailyReviewCounts: widget.userData.dailyReviewCounts,
+                          longestStreak:
+                              StudyActivity.computeLongestStreak(widget.userData.dailyReviewCounts),
+                          isDark: isDark,
+                        ),
                       const SizedBox(height: 24),
                     ],
                   ),

@@ -36,7 +36,7 @@ class DecksSection extends StatelessWidget {
         children: [
           if (showSectionTitle) ...[
             Text(
-              'Your Decks',
+              'Мои колоды',
               style: AppStyles.sectionTitle(isDark),
             ),
             const SizedBox(height: AppStyles.sectionSpacing),
