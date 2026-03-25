@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package sigma;
+
+service CardGenerationService {
+  // Server-streaming RPC: sends card chunks as they are generated
+  rpc GenerateCards (GenerateCardsRequest) returns (stream CardChunk);
+}
+
+message GenerateCardsRequest {
+  string text         = 1;
+  int32  target_count = 2;
+  string deck_id      = 3;
+}
+
+message CardChunk {
+  string front = 1;
+  string back  = 2;
+  bool   done  = 3;
+  string error = 4;
+}
