@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:xml/xml.dart';
 
 import '../services/api_service.dart';
+import '../services/grpc_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_styles.dart';
 import '../widgets/create_deck/flashcards_editor.dart';
@@ -25,6 +26,7 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
   String? _errorMessage;
   bool _useMLGeneration = false;
   bool _isAuthenticated = false;
+  int _streamedCount = 0;
 
   @override
   void initState() {
@@ -155,45 +157,49 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
   Future<void> _generateWithML(String text) async {
     setState(() {
       _isGenerating = true;
+      _streamedCount = 0;
       _errorMessage = null;
     });
 
+    final drafts = <FlashcardDraft>[];
+
     try {
-      final result = await ApiService.generateCards(
+      final stream = GrpcService.generateCards(
         text: text,
-        count: 10, // Генерируем до 10 карточек
+        deckId: '',
+        targetCount: 10,
       );
+
+      await for (final chunk in stream) {
+        if (!mounted) return;
+        if (chunk.error.isNotEmpty) {
+          setState(() {
+            _errorMessage = chunk.error;
+            _isGenerating = false;
+          });
+          return;
+        }
+        if (chunk.front.isNotEmpty || chunk.back.isNotEmpty) {
+          drafts.add(FlashcardDraft(front: chunk.front, back: chunk.back));
+          setState(() => _streamedCount = drafts.length);
+        }
+        if (chunk.done) break;
+      }
 
       if (!mounted) return;
 
-      if (result['success'] == true) {
-        final cardsData = result['cards'] as List;
-        final drafts = cardsData.map((cardJson) {
-          final content = cardJson['content'] as Map<String, dynamic>;
-          return FlashcardDraft(
-            front: content['front'] as String? ?? '',
-            back: content['back'] as String? ?? '',
-          );
-        }).toList();
-
-        if (drafts.isNotEmpty) {
-          Navigator.of(context).pop(drafts);
-        } else {
-          setState(() {
-            _errorMessage = 'ML сервис не сгенерировал карточки. Попробуйте использовать простой режим.';
-            _isGenerating = false;
-          });
-        }
+      if (drafts.isNotEmpty) {
+        Navigator.of(context).pop(drafts);
       } else {
         setState(() {
-          _errorMessage = result['error'] as String? ?? 'Ошибка генерации карточек';
+          _errorMessage = 'Сервис не сгенерировал карточки. Попробуйте простой режим.';
           _isGenerating = false;
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Ошибка: ${e.toString()}';
+        _errorMessage = 'Ошибка gRPC: ${e.toString()}';
         _isGenerating = false;
       });
     }
@@ -357,10 +363,10 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
                 child: FilledButton(
                   onPressed: (_isLoading || _isGenerating) ? null : _handleContinue,
                   child: _isGenerating
-                      ? const Row(
+                      ? Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SizedBox(
+                            const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -368,8 +374,12 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             ),
-                            SizedBox(width: 16),
-                            Text('Генерация карточек...'),
+                            const SizedBox(width: 16),
+                            Text(
+                              _streamedCount == 0
+                                  ? 'Генерация карточек...'
+                                  : 'Сгенерировано: $_streamedCount...',
+                            ),
                           ],
                         )
                       : const Text('Продолжить к созданию карточек'),
