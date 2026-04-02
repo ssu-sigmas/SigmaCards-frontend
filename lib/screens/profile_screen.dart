@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user_data.dart';
+import 'generation_history_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   final UserData userData;
@@ -53,6 +54,17 @@ class ProfileScreen extends StatelessWidget {
                   title: const Text('Тёмная тема'),
                   value: isDark,
                   onChanged: (_) => onToggleTheme(),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.auto_awesome_rounded),
+                  title: const Text('История генераций'),
+                  subtitle: const Text('Прошлые AI-генерации карточек'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const GenerationHistoryScreen(),
+                    ),
+                  ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.logout_rounded),

@@ -857,5 +857,22 @@ class ApiService {
       return false;
     }
   }
+
+  // ==========================================
+  // GENERATIONS API
+  // ==========================================
+
+  static Future<Map<String, dynamic>> getGenerations({
+    int skip = 0,
+    int limit = 50,
+  }) async {
+    final result = await get('/generations?skip=$skip&limit=$limit');
+    if (result['success'] == true) {
+      final data = result['data'];
+      final list = data is List ? data : (data as Map<String, dynamic>?)?['items'] as List? ?? [];
+      return {'success': true, 'generations': list};
+    }
+    return result;
+  }
 }
 
