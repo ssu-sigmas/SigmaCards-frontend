@@ -22,6 +22,7 @@ class ImportTextScreen extends StatefulWidget {
 class _ImportTextScreenState extends State<ImportTextScreen> {
   final TextEditingController _textController = TextEditingController();
   bool _isLoading = false;
+  bool _isPdfLoading = false;
   bool _isGenerating = false;
   String? _errorMessage;
   bool _useMLGeneration = false;
@@ -99,6 +100,79 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _pickAndUploadPdf() async {
+    setState(() {
+      _errorMessage = null;
+      _isPdfLoading = true;
+    });
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        setState(() => _isPdfLoading = false);
+        return;
+      }
+
+      final bytes = result.files.single.bytes;
+      if (bytes == null) {
+        setState(() {
+          _errorMessage = 'Не удалось прочитать PDF.';
+          _isPdfLoading = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _isGenerating = true;
+        _streamedCount = 0;
+        _isPdfLoading = false;
+      });
+
+      final apiResult = await ApiService.generateCardsFromPdf(
+        pdfBytes: bytes,
+        targetCount: 10,
+      );
+
+      if (!mounted) return;
+
+      if (apiResult['success'] == true) {
+        final data = apiResult['data'] as Map<String, dynamic>;
+        final cardsRaw = data['cards'] as List? ?? [];
+        final drafts = cardsRaw.map((e) {
+          final content = (e as Map<String, dynamic>)['content']
+              as Map<String, dynamic>? ?? e;
+          return FlashcardDraft(
+            front: content['front'] as String? ?? '',
+            back: content['back'] as String? ?? '',
+          );
+        }).toList();
+
+        if (drafts.isNotEmpty) {
+          Navigator.of(context).pop(drafts);
+          return;
+        }
+      }
+
+      setState(() {
+        _errorMessage = apiResult['error'] as String? ??
+            'PDF не содержит текста для генерации карточек.';
+        _isGenerating = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Ошибка при загрузке PDF: $e';
+        _isPdfLoading = false;
+        _isGenerating = false;
+      });
     }
   }
 
@@ -314,7 +388,9 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: _isLoading ? null : _pickDocx,
+                      onPressed: (_isLoading || _isGenerating || _isPdfLoading)
+                          ? null
+                          : _pickDocx,
                       icon: _isLoading
                           ? const SizedBox(
                               width: 18,
@@ -322,11 +398,29 @@ class _ImportTextScreenState extends State<ImportTextScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.upload_file),
-                      label: Text(_isLoading ? 'Загрузка...' : 'Импорт DOCX'),
+                      label: Text(_isLoading ? 'Загрузка...' : 'DOCX'),
                       style: AppStyles.purpleButtonStyle,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: (_isLoading || _isGenerating || _isPdfLoading ||
+                              !_isAuthenticated)
+                          ? null
+                          : _pickAndUploadPdf,
+                      icon: _isPdfLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.picture_as_pdf_rounded),
+                      label: Text(_isPdfLoading ? 'Загрузка...' : 'PDF + AI'),
+                      style: AppStyles.purpleButtonStyle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   IconButton(
                     onPressed: _textController.text.isEmpty
                         ? null
