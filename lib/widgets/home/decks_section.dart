@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/user_data.dart';
 import '../../models/deck.dart';
 import '../../widgets/deck_card.dart';
+import '../../widgets/skeleton_loader.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_styles.dart';
 
@@ -13,6 +14,7 @@ class DecksSection extends StatelessWidget {
   final Function(Deck) onStudyDeck;
   final Function(String) onDeleteDeck;
   final bool showSectionTitle;
+  final bool isLoading;
 
   const DecksSection({
     super.key,
@@ -23,6 +25,7 @@ class DecksSection extends StatelessWidget {
     required this.onStudyDeck,
     required this.onDeleteDeck,
     this.showSectionTitle = true,
+    this.isLoading = false,
   });
 
   @override
@@ -41,9 +44,12 @@ class DecksSection extends StatelessWidget {
             ),
             const SizedBox(height: AppStyles.sectionSpacing),
           ],
-          userData.decks.isEmpty
-              ? _buildEmptyState(context, scheme)
-              : _buildDecksList(context),
+          if (isLoading)
+            const DeckListSkeleton(count: 3)
+          else if (userData.decks.isEmpty)
+            _buildEmptyState(context, scheme)
+          else
+            _buildDecksList(context),
         ],
       ),
     );

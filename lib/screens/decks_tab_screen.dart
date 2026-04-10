@@ -12,6 +12,7 @@ class DecksTabScreen extends StatelessWidget {
   final Function(Deck) onEditDeck;
   final Function(Deck) onStudyDeck;
   final Function(String) onDeleteDeck;
+  final bool isLoadingDecks;
 
   const DecksTabScreen({
     super.key,
@@ -20,6 +21,7 @@ class DecksTabScreen extends StatelessWidget {
     required this.onEditDeck,
     required this.onStudyDeck,
     required this.onDeleteDeck,
+    this.isLoadingDecks = false,
   });
 
   @override
@@ -53,6 +55,7 @@ class DecksTabScreen extends StatelessWidget {
                     onStudyDeck: onStudyDeck,
                     onDeleteDeck: onDeleteDeck,
                     showSectionTitle: false,
+                    isLoading: isLoadingDecks,
                   ),
                 ),
               ),

@@ -16,6 +16,7 @@ class MainShellScreen extends StatefulWidget {
   final VoidCallback onAIImport;
   final VoidCallback onToggleTheme;
   final VoidCallback onLogout;
+  final bool isLoadingDecks;
 
   const MainShellScreen({
     super.key,
@@ -28,6 +29,7 @@ class MainShellScreen extends StatefulWidget {
     required this.onAIImport,
     required this.onToggleTheme,
     required this.onLogout,
+    this.isLoadingDecks = false,
   });
 
   @override
@@ -61,6 +63,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
             onEditDeck: widget.onEditDeck,
             onStudyDeck: widget.onStudyDeck,
             onDeleteDeck: widget.onDeleteDeck,
+            isLoadingDecks: widget.isLoadingDecks,
           ),
           ProfileScreen(
             userData: widget.userData,

@@ -30,6 +30,7 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   bool _isLoading = true;
+  bool _isLoadingDecks = false;
 
   UserData _userData = UserData(
     isAuthenticated: false,
@@ -60,7 +61,9 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
 
     // Если пользователь авторизован, загружаем колоды с сервера
     if (_userData.isAuthenticated && await ApiService.isAuthenticated()) {
+      setState(() => _isLoadingDecks = true);
       await _loadDecksFromServer();
+      if (mounted) setState(() => _isLoadingDecks = false);
     }
 
     if (!mounted) return;
@@ -793,6 +796,7 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
                       onAIImport: _aiImport,
                       onToggleTheme: _toggleTheme,
                       onLogout: _handleLogout,
+                      isLoadingDecks: _isLoadingDecks,
                     )
                   : OnboardingScreen(
                       onComplete: _completeOnboarding,
