@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' show pi;
 import 'package:flutter/material.dart';
 import '../models/deck.dart';
 import '../models/due_card.dart';
@@ -245,6 +246,170 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     );
   }
 
+  Widget _buildCardFace({
+    required bool isDark,
+    required bool isBack,
+    ImageProvider? imageProvider,
+  }) {
+    final bgColor = isBack ? null : (isDark ? AppColors.darkCard : AppColors.lightCard);
+    final gradient = isBack
+        ? const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF7C3AED), Color(0xFF2563EB)],
+          )
+        : null;
+    final labelColor = isBack
+        ? Colors.white60
+        : (isDark ? Colors.grey[500]! : Colors.grey[600]!);
+    final textColor = isBack ? Colors.white : (isDark ? Colors.white : Colors.black87);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: bgColor,
+        gradient: gradient,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(28),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              isBack ? 'Ответ' : 'Вопрос',
+              style: TextStyle(
+                fontSize: 13,
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w600,
+                color: labelColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (isBack && imageProvider != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image(
+                  image: imageProvider,
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              isBack ? (_current?.back ?? '') : (_current?.front ?? ''),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isBack ? Icons.visibility_off_rounded : Icons.touch_app_rounded,
+                  size: 16,
+                  color: labelColor,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isBack ? 'Нажмите, чтобы скрыть' : 'Нажмите, чтобы открыть',
+                  style: TextStyle(fontSize: 13, color: labelColor),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatingButtons(bool isDark, {Key? key}) {
+    return Column(
+      key: key,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Насколько хорошо вы знали ответ?',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: isDark ? Colors.grey[300] : Colors.grey[700],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            _ratingBtn(
+              label: 'Снова',
+              color: const Color(0xFFEF5350),
+              onTap: () => _handleDifficulty(_Difficulty.again),
+            ),
+            const SizedBox(width: 8),
+            _ratingBtn(
+              label: 'Сложно',
+              color: const Color(0xFFFFA726),
+              onTap: () => _handleDifficulty(_Difficulty.hard),
+            ),
+            const SizedBox(width: 8),
+            _ratingBtn(
+              label: 'Хорошо',
+              color: const Color(0xFF2563EB),
+              onTap: () => _handleDifficulty(_Difficulty.good),
+            ),
+            const SizedBox(width: 8),
+            _ratingBtn(
+              label: 'Легко',
+              color: const Color(0xFF16A34A),
+              onTap: () => _handleDifficulty(_Difficulty.easy),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _ratingBtn({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: Material(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          splashColor: color.withValues(alpha: 0.25),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   int _difficultyToRating(_Difficulty d) {
     switch (d) {
       case _Difficulty.again:
@@ -341,119 +506,66 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
             Expanded(
               child: GestureDetector(
                 onTap: _flip,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: _isFlipped
-                        ? const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF2563EB)])
-                        : null,
-                    color: _isFlipped ? null : (isDark ? AppColors.darkCard : AppColors.lightCard),
-                  ),
-                  padding: const EdgeInsets.all(24),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _isFlipped ? 'Answer' : 'Question',
-                          style: TextStyle(
-                            color: _isFlipped ? Colors.white70 : (isDark ? Colors.grey[500] : Colors.grey[600]),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (imageProvider != null) ...[
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image(
-                              image: imageProvider,
-                              height: 140,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: _isFlipped ? 1 : 0),
+                  duration: const Duration(milliseconds: 380),
+                  curve: Curves.easeInOutCubic,
+                  builder: (context, value, _) {
+                    final angle = value * pi;
+                    final isFrontVisible = angle < pi / 2;
+                    return Transform(
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.0012)
+                        ..rotateY(angle),
+                      alignment: Alignment.center,
+                      child: isFrontVisible
+                          ? _buildCardFace(
+                              isDark: isDark,
+                              isBack: false,
+                              imageProvider: imageProvider,
+                            )
+                          : Transform(
+                              transform: Matrix4.identity()..rotateY(pi),
+                              alignment: Alignment.center,
+                              child: _buildCardFace(
+                                isDark: isDark,
+                                isBack: true,
+                                imageProvider: imageProvider,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                        Text(
-                          _isFlipped ? _current!.back : _current!.front,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: _isFlipped ? Colors.white : (isDark ? Colors.white : Colors.black87),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Tap to ${_isFlipped ? 'hide' : 'reveal'}',
-                          style: TextStyle(
-                            color: _isFlipped ? Colors.white70 : (isDark ? Colors.grey[500] : Colors.grey[600]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            if (_isFlipped)
-              Column(
-                children: [
-                  Text(
-                    'How well did you know this?',
-                    style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _handleDifficulty(_Difficulty.again),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFFEF9A9A)),
-                          ),
-                          child: const Text('Again'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _handleDifficulty(_Difficulty.hard),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFFFFCC80)),
-                          ),
-                          child: const Text('Hard'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _handleDifficulty(_Difficulty.good),
-                          child: const Text('Good'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _handleDifficulty(_Difficulty.easy),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                          child: const Text('Easy'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              )
-            else
-              Text(
-                'Tap the card to reveal',
-                style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.25),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
               ),
+              child: _isFlipped
+                  ? _buildRatingButtons(isDark, key: const ValueKey('rating'))
+                  : Padding(
+                      key: const ValueKey('hint'),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        'Нажмите на карточку, чтобы увидеть ответ',
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+            ),
           ],
         ),
       ),
