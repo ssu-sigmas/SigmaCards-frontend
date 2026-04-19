@@ -587,14 +587,18 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     }
 
     if (result['success'] == true) {
-      // Получаем userId из сохраненных данных
       final userId = await ApiService.getUserId();
-      
+      final userResult = await ApiService.getCurrentUser(skipRefresh: true);
+      final username = userResult['success'] == true
+          ? (userResult['user'] as dynamic)?.username as String?
+          : null;
+
       // Успешный вход
       setState(() {
         _userData = _userData.copyWith(
           isAuthenticated: true,
           userId: userId,
+          username: username,
         );
       });
       _persist();
@@ -667,14 +671,18 @@ class _SigmaCardsAppState extends State<SigmaCardsApp> {
     }
 
     if (result['success'] == true) {
-      // Получаем userId из сохраненных данных
       final userId = await ApiService.getUserId();
-      
+      final userResult = await ApiService.getCurrentUser(skipRefresh: true);
+      final username = userResult['success'] == true
+          ? (userResult['user'] as dynamic)?.username as String?
+          : null;
+
       // Успешная регистрация
       setState(() {
         _userData = _userData.copyWith(
           isAuthenticated: true,
           userId: userId,
+          username: username,
         );
       });
       _persist();

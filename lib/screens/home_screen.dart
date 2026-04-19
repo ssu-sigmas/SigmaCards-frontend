@@ -84,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       HeaderSection(
                         userData: widget.userData,
                         isDark: isDark,
+                        dueCount: _dueCount,
                       ),
                       const SizedBox(height: 24),
                       QuickStudyButton(

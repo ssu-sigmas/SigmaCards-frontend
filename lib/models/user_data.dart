@@ -11,6 +11,7 @@ class UserData {
   final Map<String, int> dailyReviewCounts;
   final AppTheme theme;
   final String? userId; // UUID текущего пользователя
+  final String? username;
 
   UserData({
     this.isAuthenticated = false,
@@ -20,6 +21,7 @@ class UserData {
     this.dailyReviewCounts = const {},
     required this.theme,
     this.userId,
+    this.username,
   });
 
   int get totalCards => decks.fold(0, (sum, deck) => 
@@ -39,6 +41,7 @@ class UserData {
     Map<String, int>? dailyReviewCounts,
     AppTheme? theme,
     String? userId,
+    String? username,
   }) {
     return UserData(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
@@ -48,6 +51,7 @@ class UserData {
       dailyReviewCounts: dailyReviewCounts ?? this.dailyReviewCounts,
       theme: theme ?? this.theme,
       userId: userId ?? this.userId,
+      username: username ?? this.username,
     );
   }
 
@@ -59,6 +63,7 @@ class UserData {
         'dailyReviewCounts': dailyReviewCounts,
         'theme': theme.name,
         'userId': userId,
+        'username': username,
       };
 
   factory UserData.fromJson(Map<String, dynamic> json) => UserData(
@@ -74,6 +79,7 @@ class UserData {
           orElse: () => AppTheme.light,
         ),
         userId: json['userId'] as String?,
+        username: json['username'] as String?,
       );
 
   static Map<String, int> _parseDailyCounts(dynamic raw) {
