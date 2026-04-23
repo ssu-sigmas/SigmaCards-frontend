@@ -549,12 +549,13 @@ class ApiService {
   // Обновить колоду
   static Future<Map<String, dynamic>> updateDeck({
     required String deckId,
+    required int version,
     String? title,
     String? description,
     String? status,
   }) async {
-    final body = <String, dynamic>{};
-    
+    final body = <String, dynamic>{'version': version};
+
     if (title != null) body['title'] = title;
     if (description != null) body['description'] = description;
     if (status != null) body['status'] = status;
@@ -655,13 +656,14 @@ class ApiService {
   // Обновить карточку
   static Future<Map<String, dynamic>> updateCard({
     required String cardId,
+    required int version,
     Map<String, dynamic>? content,
     String? cardType,
     int? position,
     bool? isSuspended,
   }) async {
-    final body = <String, dynamic>{};
-    
+    final body = <String, dynamic>{'version': version};
+
     if (content != null) body['content'] = content;
     if (cardType != null) body['card_type'] = cardType;
     if (position != null) body['position'] = position;
@@ -737,6 +739,7 @@ class ApiService {
   static Future<Map<String, dynamic>> submitReview({
     required String userCardId,
     required int rating, // 1-4
+    required int version,
     int durationMs = 0,
   }) async {
     if (rating < 1 || rating > 4) {
@@ -749,6 +752,7 @@ class ApiService {
     final body = <String, dynamic>{
       'rating': rating,
       'duration_ms': durationMs,
+      'version': version,
     };
 
     return post('/review/$userCardId', body: body);
