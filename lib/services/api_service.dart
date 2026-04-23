@@ -4,8 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 
 class ApiService {
-  // TODO: Настроить базовый URL (можно вынести в конфиг)
   static const String baseUrl = 'http://localhost:8010';
+  static const String _v1 = '/api/v1';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userIdKey = 'user_id';
@@ -60,7 +60,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/register'),
+        Uri.parse('$baseUrl$_v1/auth/register'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -123,7 +123,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
+        Uri.parse('$baseUrl$_v1/auth/login'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -200,13 +200,10 @@ class ApiService {
       }
 
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/refresh'),
+        Uri.parse('$baseUrl$_v1/auth/refresh?refresh_token=${Uri.encodeComponent(refreshTokenValue)}'),
         headers: {
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'refresh_token': refreshTokenValue,
-        }),
       );
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -260,7 +257,7 @@ class ApiService {
       if (skipRefresh) {
         final headers = await getAuthHeaders();
         response = await http.get(
-          Uri.parse('$baseUrl/users/me'),
+          Uri.parse('$baseUrl$_v1/users/me'),
           headers: headers,
         );
       } else {
@@ -350,27 +347,27 @@ class ApiService {
     switch (method.toUpperCase()) {
       case 'GET':
         response = await http.get(
-          Uri.parse('$baseUrl$endpoint'),
+          Uri.parse('$baseUrl$_v1$endpoint'),
           headers: headers,
         );
         break;
       case 'POST':
         response = await http.post(
-          Uri.parse('$baseUrl$endpoint'),
+          Uri.parse('$baseUrl$_v1$endpoint'),
           headers: headers,
           body: body != null ? jsonEncode(body) : null,
         );
         break;
       case 'PUT':
         response = await http.put(
-          Uri.parse('$baseUrl$endpoint'),
+          Uri.parse('$baseUrl$_v1$endpoint'),
           headers: headers,
           body: body != null ? jsonEncode(body) : null,
         );
         break;
       case 'DELETE':
         response = await http.delete(
-          Uri.parse('$baseUrl$endpoint'),
+          Uri.parse('$baseUrl$_v1$endpoint'),
           headers: headers,
         );
         break;
@@ -395,27 +392,27 @@ class ApiService {
         switch (method.toUpperCase()) {
           case 'GET':
             response = await http.get(
-              Uri.parse('$baseUrl$endpoint'),
+              Uri.parse('$baseUrl$_v1$endpoint'),
               headers: headers,
             );
             break;
           case 'POST':
             response = await http.post(
-              Uri.parse('$baseUrl$endpoint'),
+              Uri.parse('$baseUrl$_v1$endpoint'),
               headers: headers,
               body: body != null ? jsonEncode(body) : null,
             );
             break;
           case 'PUT':
             response = await http.put(
-              Uri.parse('$baseUrl$endpoint'),
+              Uri.parse('$baseUrl$_v1$endpoint'),
               headers: headers,
               body: body != null ? jsonEncode(body) : null,
             );
             break;
           case 'DELETE':
             response = await http.delete(
-              Uri.parse('$baseUrl$endpoint'),
+              Uri.parse('$baseUrl$_v1$endpoint'),
               headers: headers,
             );
             break;

@@ -27,6 +27,8 @@ class DecksSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppStyles.defaultPadding),
       child: Column(
@@ -40,46 +42,79 @@ class DecksSection extends StatelessWidget {
             const SizedBox(height: AppStyles.sectionSpacing),
           ],
           userData.decks.isEmpty
-              ? _buildEmptyState(context)
+              ? _buildEmptyState(context, scheme)
               : _buildDecksList(context),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Card(
-      color: isDark ? AppColors.darkCard : AppColors.lightCard,
+  Widget _buildEmptyState(BuildContext context, ColorScheme scheme) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  AppColors.darkCard,
+                ]
+              : [
+                  Colors.white,
+                  scheme.primaryContainer.withValues(alpha: 0.22),
+                ],
+        ),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.5),
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.fromLTRB(28, 36, 28, 32),
         child: Column(
           children: [
-            Icon(
-              Icons.psychology,
-              size: 48,
-              color: isDark ? Colors.grey[500] : Colors.grey[400],
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: scheme.primary.withValues(alpha: isDark ? 0.18 : 0.12),
+              ),
+              child: Icon(
+                Icons.auto_stories_rounded,
+                size: 44,
+                color: isDark ? scheme.primary.withValues(alpha: 0.9) : scheme.primary,
+              ),
             ),
-            const SizedBox(height: AppStyles.sectionSpacing),
+            const SizedBox(height: 20),
             Text(
-              'No decks yet',
-              style: AppStyles.emptyStateTitle(isDark),
+              'Пока нет колод',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Create your first deck to start learning',
-              style: AppStyles.emptyStateSubtitle(isDark),
+              'Создайте первую колоду и добавьте карточки — так удобнее повторять материал.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: FilledButton.icon(
                 onPressed: onCreateDeck,
-                icon: const Icon(Icons.add),
-                label: const Text('Create Deck'),
-                style: AppStyles.purpleButtonStyle.copyWith(
-                  padding: MaterialStateProperty.all(
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                icon: const Icon(Icons.add_rounded, size: 22),
+                label: const Text('Создать колоду'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),
@@ -110,24 +145,22 @@ class DecksSection extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete deck?'),
+        title: const Text('Удалить колоду?'),
         content: Text(
-          'This will permanently delete "${deck.title}" and all its cards. This action cannot be undone.',
+          'Колода «${deck.title}» и все её карточки будут удалены. Это действие нельзя отменить.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Отмена'),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               onDeleteDeck(deck.id);
             },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            child: const Text('Delete'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Удалить'),
           ),
         ],
       ),

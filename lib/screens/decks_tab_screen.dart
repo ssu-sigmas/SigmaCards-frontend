@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/user_data.dart';
 import '../models/deck.dart';
+import '../theme/app_colors.dart';
 import '../widgets/home/decks_section.dart';
+import '../widgets/home/decks_tab_header.dart';
 
 /// Вкладка «Колоды» — полный список без дублирования логики.
 class DecksTabScreen extends StatelessWidget {
@@ -24,30 +26,38 @@ class DecksTabScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Мои колоды'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: onCreateDeck,
-            icon: const Icon(Icons.add_rounded),
-            tooltip: 'Новая колода',
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: DecksSection(
-            userData: userData,
-            isDark: isDark,
-            onCreateDeck: onCreateDeck,
-            onEditDeck: onEditDeck,
-            onStudyDeck: onStudyDeck,
-            onDeleteDeck: onDeleteDeck,
-            showSectionTitle: false,
-          ),
+    return ColoredBox(
+      color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DecksTabHeader(
+              isDark: isDark,
+              deckCount: userData.decks.length,
+              totalCards: userData.totalCards,
+              onCreateDeck: onCreateDeck,
+            ),
+            Expanded(
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(top: 12, bottom: 28),
+                  child: DecksSection(
+                    userData: userData,
+                    isDark: isDark,
+                    onCreateDeck: onCreateDeck,
+                    onEditDeck: onEditDeck,
+                    onStudyDeck: onStudyDeck,
+                    onDeleteDeck: onDeleteDeck,
+                    showSectionTitle: false,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
